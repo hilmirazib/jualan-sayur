@@ -48,6 +48,68 @@ After migration, the following tables will be available:
 - **Adminer (Database UI)**: http://localhost:8080
 - **RabbitMQ Management**: http://localhost:15672 (user: sayur_user, pass: sayur_password)
 
+## Testing Configuration and Database
+
+### Test Config and Database Connection
+```bash
+cd services/user-service
+go run test/test_config.go
+```
+
+**Expected Output:**
+```
+=== CONFIG TEST ===
+App Port: 8080
+App Env: development
+JWT Secret: secret
+JWT Issuer: secret
+
+=== DATABASE CONFIG ===
+Host: localhost
+Port: 5432
+User: sayur_user
+Database: sayur_db
+Max Open: 10
+Max Idle: 20
+
+=== DATABASE CONNECTION TEST ===
+Seeded role: Super Admin
+Seeded role: Customer
+✅ Database connection successful!
+✅ Database ping successful!
+✅ All tests passed! Config and database setup is working correctly.
+```
+
+### Configuration Files
+
+#### `.env` File
+Contains environment variables for the application (copy from `.env.example`):
+```env
+APP_ENV="development"
+APP_PORT="8080"
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_USER=your_db_user
+DATABASE_PASSWORD=your_db_password
+DATABASE_NAME=your_db_name
+DATABASE_MAX_OPEN_CONNECTION=10
+DATABASE_MAX_IDLE_CONNECTION=20
+JWT_SECRET_KEY="your_jwt_secret"
+JWT_ISSUER="your_jwt_issuer"
+```
+
+**⚠️ Security Note:** Never commit actual credentials to version control. Use `.env` for local development only.
+
+#### `config/config.go`
+- Loads configuration from `.env` file using Viper
+- Provides structured config access
+- Usage: `cfg := config.NewConfig()`
+
+#### `config/database.go`
+- Establishes PostgreSQL connection using GORM
+- Automatically runs database seeds
+- Usage: `db, err := cfg.ConnectionPostgres()`
+
 ## Troubleshooting
 - If migration fails, ensure Docker services are running: `docker ps`
 - To rebuild services: `docker-compose up --build`
