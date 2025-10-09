@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: sayur-postgres
+    environment:
+      POSTGRES_DB: sayur_db
+      POSTGRES_USER: sayur_user
+      POSTGRES_PASSWORD: sayur_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sayur-network
+
+  redis:
+    image: redis:7
+    container_name: sayur-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - sayur-network
+
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: sayur-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: sayur_user
+      RABBITMQ_DEFAULT_PASS: sayur_password
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - sayur-network
+
+  adminer:
+    image: adminer
+    container_name: sayur-adminer
+    ports:
+      - "8080:8080"
+    networks:
+      - sayur-network
+
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    container_name: sayur-user-service
+    ports:
+      - "8001:8001"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=sayur_user
+      - DB_PASSWORD=sayur_password
+      - DB_NAME=sayur_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=sayur_user
+      - RABBITMQ_PASSWORD=sayur_password
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - sayur-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+
+networks:
+  sayur-network:
+    driver: bridge
