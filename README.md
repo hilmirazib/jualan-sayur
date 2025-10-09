@@ -56,6 +56,25 @@ cd services/user-service
 go run test/test_config.go
 ```
 
+### Test Migration Commands
+```bash
+cd services/user-service
+
+# Test migrate up (run all migrations)
+go run cmd/migrate.go -cmd up
+
+# Test migrate down (rollback last migration)
+go run cmd/migrate.go -cmd down
+
+# Test with custom DSN
+go run cmd/migrate.go -cmd up -dsn "postgres://user:pass@host:port/db?sslmode=disable"
+```
+
+**Expected Results:**
+- `migrate up`: No output (success) or error message
+- `migrate down`: No output (success) or error message
+- Database tables should be created/dropped accordingly
+
 **Expected Output:**
 ```
 === CONFIG TEST ===
