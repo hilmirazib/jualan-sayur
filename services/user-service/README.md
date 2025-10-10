@@ -1,193 +1,279 @@
-# Sayur Project - Microservices E-Commerce Platform
+# User Service
 
-![Project Status](https://img.shields.io/badge/status-in%20development-yellow)
-![Go Version](https://img.shields.io/badge/go-%3E%3D1.21-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-
-Sayur Project adalah platform e-commerce berbasis microservices yang dibangun dengan **Golang**, **Nuxt.js**, dan **PostgreSQL**. Platform ini berfokus pada penjualan produk segar seperti sayur-mayur, buah-buahan, dan bahan makanan lainnya dengan sistem delivery radius terbatas untuk menjaga kualitas produk.
-
-## 🏗️ Arsitektur Sistem
-
-Platform ini menggunakan **microservices architecture** dengan 5 layanan utama:
-
-- **User Service** - Manajemen user, autentikasi, dan otorisasi
-- **Product Service** - Katalog produk, kategori, dan inventory management  
-- **Order Service** - Proses pemesanan, shopping cart, dan order tracking
-- **Payment Service** - Integrasi payment gateway (Midtrans) dan transaction logging
-- **Notification Service** - Email notifications dan push notifications
-
-## 🛠️ Technology Stack
-
-### Backend
-- **Language**: Go (Golang) 1.21+
-- **Web Framework**: Echo Framework
-- **Database**: PostgreSQL 15+
-- **Cache**: Redis 7+
-- **Message Broker**: RabbitMQ
-- **Authentication**: JWT
-
-### Frontend  
-- **Framework**: Nuxt.js 3
-- **UI Library**: Vue.js 3
-- **CSS Framework**: Tailwind CSS
-
-### Infrastructure
-- **Containerization**: Docker & Docker Compose
-- **Orchestration**: Kubernetes
-- **Load Testing**: K6
-- **Payment Gateway**: Midtrans
+User Service adalah microservice untuk manajemen autentikasi dan user menggunakan Clean Architecture pattern dengan Go.
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Go 1.21 atau lebih baru
-- Node.js 18 atau lebih baru
-- PostgreSQL 15+
-- Redis 7+
-- RabbitMQ 3.12+
-- Docker & Docker Compose (optional)
+### 1. Setup Environment
 
-### Local Development Setup
+```bash
+# Copy environment file
+cp .env.example .env
 
-1. **Clone repository**
-   ```bash
-   git clone <repository-url>
-   cd micro-sayur
-   ```
+# Edit .env file dengan konfigurasi database Anda
+```
 
-2. **Setup environment variables**
-   ```bash
-   cp .env.example .env
-   # Edit .env file dengan konfigurasi database dan services
-   ```
+### 2. Setup Database
 
-3. **Start infrastructure services**
-   ```bash
-   docker-compose up -d postgres redis rabbitmq
-   ```
+```bash
+# Jalankan migrations
+go run cmd/migrate.go up
 
-4. **Run database migrations**
-   ```bash
-   make migrate-up
-   ```
+# Optional: Jalankan seeds untuk data dummy
+go run cmd/migrate.go seed
+```
 
-5. **Start services**
-   ```bash
-   # Terminal 1 - User Service
-   cd services/user-service
-   go run cmd/main.go
-   
-   # Terminal 2 - Product Service  
-   cd services/product-service
-   go run cmd/main.go
-   
-   # Terminal 3 - Order Service
-   cd services/order-service
-   go run cmd/main.go
-   
-   # Terminal 4 - Payment Service
-   cd services/payment-service
-   go run cmd/main.go
-   
-   # Terminal 5 - Notification Service
-   cd services/notification-service
-   go run cmd/main.go
-   ```
+### 3. Start Server
+
+```bash
+# Jalankan server
+go run cmd/server.go
+
+# Server akan start di port 8080 (default)
+```
+
+### 4. Health Check
+
+```bash
+curl http://localhost:8080/health
+```
 
 ## 📚 API Documentation
 
-- **User Service**: http://localhost:8001/swagger
-- **Product Service**: http://localhost:8002/swagger  
-- **Order Service**: http://localhost:8003/swagger
-- **Payment Service**: http://localhost:8004/swagger
-- **Notification Service**: http://localhost:8005/swagger
+### Sign In
 
-## 🏪 Business Logic & Constraints
+**Endpoint:** `POST /api/v1/auth/signin`
 
-### Geographic Constraints
-- **Delivery Radius**: Maksimal 1-5 KM dari toko untuk menjaga kualitas produk segar
-- **Location Validation**: Sistem validasi otomatis berdasarkan koordinat GPS
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
 
-### Operational Hours  
-- **Order Cutoff**: Pemesanan ditutup jam 21:00 - 09:00 setiap hari
-- **Fresh Product Focus**: Khusus produk segar dengan manajemen expired date
+**Success Response (200):**
+```json
+{
+  "message": "Sign in successful",
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "role": "user",
+    "id": 1,
+    "name": "John Doe",
+    "email": "user@example.com",
+    "phone": "+628123456789",
+    "lat": "-6.2088",
+    "lng": "106.8456"
+  }
+}
+```
 
-### Shipping Options
-- **Pickup**: Gratis, customer datang ke toko
-- **Delivery**: Biaya tambahan Rp 5.000
+**Error Responses:**
+
+**400 Bad Request - Invalid Input:**
+```json
+{
+  "message": "Email and password are required"
+}
+```
+
+**404 Not Found - User Not Found:**
+```json
+{
+  "message": "User not found"
+}
+```
+
+**401 Unauthorized - Wrong Password:**
+```json
+{
+  "message": "Incorrect password"
+}
+```
 
 ## 🧪 Testing
 
+### Unit Tests
+
 ```bash
 # Run all tests
-make test
+go test ./...
 
-# Run specific service tests
-make test-user-service
-make test-product-service  
-make test-order-service
-make test-payment-service
-make test-notification-service
+# Run service tests only
+go test ./internal/core/service/
 
-# Run integration tests
-make test-integration
-
-# Run load tests
-make test-load
+# Run with verbose output
+go test -v ./internal/core/service/
 ```
 
-## 🚢 Deployment
+### API Testing dengan cURL
 
-### Using Docker Compose
+#### 1. Sign In - Success
 ```bash
-# Build dan start semua services
-docker-compose up --build
-
-# Production deployment
-docker-compose -f docker-compose.prod.yml up -d
+curl -X POST http://localhost:8080/api/v1/auth/signin \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "password123"
+  }'
 ```
 
-### Using Kubernetes
+#### 2. Sign In - Invalid Email
 ```bash
-# Deploy ke Kubernetes cluster
-kubectl apply -f deployments/k8s/
-
-# Check deployment status
-kubectl get pods -n sayur-project
+curl -X POST http://localhost:8080/api/v1/auth/signin \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "",
+    "password": "password123"
+  }'
 ```
 
-## 📖 Documentation
+#### 3. Sign In - User Not Found
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/signin \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "notfound@example.com",
+    "password": "password123"
+  }'
+```
 
-- [System Architecture](docs/architecture.md)
-- [API Specifications](docs/api.md)
-- [Database Schema](docs/database.md)
-- [Deployment Guide](docs/deployment.md)
-- [Development Guidelines](docs/development.md)
+#### 4. Sign In - Wrong Password
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/signin \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "wrongpassword"
+  }'
+```
+
+### API Testing dengan Postman
+
+1. **Import Collection:**
+   - Buat collection baru di Postman
+   - Tambahkan request baru dengan method POST
+   - URL: `http://localhost:8080/api/v1/auth/signin`
+   - Headers: `Content-Type: application/json`
+   - Body: raw JSON seperti contoh di atas
+
+2. **Test Scenarios:**
+   - ✅ Valid credentials → Should return 200 with JWT token
+   - ❌ Empty email → Should return 400
+   - ❌ User not found → Should return 404
+   - ❌ Wrong password → Should return 401
+
+### Using JWT Token
+
+Setelah mendapat token dari Sign In, gunakan untuk API yang protected:
+
+```bash
+curl -X GET http://localhost:8080/api/v1/protected-endpoint \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
+```
+
+## 🏗️ Architecture
+
+```
+HTTP Request
+    ↓
+Handler Layer (Echo)
+    ↓
+Service Layer (Business Logic)
+    ↓
+Repository Layer (Data Access)
+    ↓
+Database (PostgreSQL)
+```
+
+### Layers:
+
+- **Handler**: HTTP request/response handling
+- **Service**: Business logic, validation, JWT generation
+- **Repository**: Database operations
+- **Entity**: Domain models
+- **Port**: Interface definitions
+
+## 🔧 Configuration
+
+### Environment Variables (.env)
+
+```env
+# App Configuration
+APP_NAME=user-service
+APP_ENV=development
+APP_PORT=8080
+JWT_SECRET_KEY=your-super-secret-jwt-key-here
+JWT_ISSUER=user-service
+
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=password
+DB_NAME=user_service
+DB_MAX_OPEN_CONNS=10
+DB_MAX_IDLE_CONNS=5
+```
+
+## 📦 Dependencies
+
+- **Echo**: Web framework
+- **GORM**: ORM untuk database
+- **PostgreSQL**: Database
+- **JWT**: Token authentication
+- **Zerolog**: Structured logging
+- **Testify**: Testing framework
+
+## 🐳 Docker
+
+```bash
+# Build image
+docker build -t user-service .
+
+# Run container
+docker run -p 8080:8080 --env-file .env user-service
+```
+
+## 📝 Development
+
+### Adding New Features
+
+1. **Repository**: Tambahkan method di interface dan implementasi
+2. **Service**: Tambahkan business logic
+3. **Handler**: Tambahkan HTTP endpoint
+4. **Tests**: Tambahkan unit tests
+
+### Code Structure
+
+```
+services/user-service/
+├── cmd/                    # Application entrypoints
+├── config/                 # Configuration
+├── database/               # Migrations & seeds
+├── internal/
+│   ├── adapter/           # External interfaces
+│   │   ├── handler/       # HTTP handlers
+│   │   ├── middleware/    # HTTP middleware
+│   │   └── repository/    # Data repositories
+│   ├── app/               # Application setup
+│   └── core/              # Business logic
+│       ├── domain/        # Domain models
+│       ├── port/          # Interfaces
+│       └── service/       # Business services
+├── utils/                  # Utilities
+└── mocks/                  # Test mocks
+```
 
 ## 🤝 Contributing
 
-1. Fork repository ini
-2. Buat feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit perubahan (`git commit -m 'Add some amazing feature'`)
-4. Push ke branch (`git push origin feature/amazing-feature`)
-5. Buat Pull Request
+1. Fork repository
+2. Create feature branch
+3. Add tests untuk perubahan
+4. Pastikan semua tests pass
+5. Submit pull request
 
-## 📝 License
+## 📄 License
 
-Project ini dilisensikan di bawah MIT License. Lihat file [LICENSE](LICENSE) untuk detail lengkap.
-
-## 👥 Team
-
-- **Backend Developer**: [Your Name]
-- **Frontend Developer**: [Frontend Dev Name]  
-- **DevOps Engineer**: [DevOps Engineer Name]
-
-## 📞 Support
-
-Jika ada pertanyaan atau butuh bantuan, silakan:
-- Buat [GitHub Issue](../../issues)
-- Contact: [your-email@example.com]
-
----
-
-**Made with ❤️ for Indonesian fresh food market**
+This project is licensed under the MIT License.
