@@ -27,7 +27,7 @@ go run cmd/migrate.go seed
 
 ```bash
 # Jalankan server
-go run cmd/server.go
+go run ./cmd/server
 
 # Server akan start di port 8080 (default)
 ```

@@ -6,6 +6,7 @@ import (
 	"user-service/internal/adapter/handler/response"
 	"user-service/internal/core/domain/entity"
 	"user-service/internal/core/port"
+	"user-service/utils/validator"
 
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
@@ -17,6 +18,7 @@ type UserHandlerInterface interface {
 
 type UserHandler struct {
 	userService port.UserServiceInterface
+	validator   *validator.Validator
 }
 
 func (u *UserHandler) SignIn(c echo.Context) error {
@@ -34,9 +36,10 @@ func (u *UserHandler) SignIn(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, resp)
 	}
 
-	// Basic validation
-	if req.Email == "" || req.Password == "" {
-		resp.Message = "Email and password are required"
+	// Validate request using go-playground/validator
+	if err := u.validator.Validate(&req); err != nil {
+		log.Error().Err(err).Msg("[UserHandler-SignIn] Validation failed")
+		resp.Message = err.Error()
 		return c.JSON(http.StatusBadRequest, resp)
 	}
 
@@ -87,5 +90,8 @@ func (u *UserHandler) SignIn(c echo.Context) error {
 }
 
 func NewUserHandler(userService port.UserServiceInterface) UserHandlerInterface {
-	return &UserHandler{userService: userService}
+	return &UserHandler{
+		userService: userService,
+		validator:   validator.NewValidator(),
+	}
 }
