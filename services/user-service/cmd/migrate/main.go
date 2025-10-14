@@ -6,10 +6,14 @@ import (
 	"log"
 	"os"
 
+	"user-service/database/seeds"
+
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/joho/godotenv"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -45,11 +49,32 @@ func main() {
 		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 			log.Fatalf("migrate up failed: %v", err)
 		}
+		log.Println("Migration completed successfully")
+
+		// Run seeds after migration
+		log.Println("Running database seeds...")
+		runSeeds(databaseURL)
 	case "down":
 		if err := m.Down(); err != nil {
 			log.Fatalf("migrate down failed: %v", err)
 		}
+	case "seed":
+		runSeeds(databaseURL)
 	default:
 		log.Fatalf("unknown cmd: %s", *cmd)
 	}
+}
+
+func runSeeds(databaseURL string) {
+	// Initialize GORM connection for seeding
+	db, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{})
+	if err != nil {
+		log.Fatalf("failed to connect to database for seeding: %v", err)
+	}
+
+	// Run seeds
+	seeds.SeedRole(db)
+	seeds.SeedUsers(db)
+
+	log.Println("Seeding completed successfully")
 }

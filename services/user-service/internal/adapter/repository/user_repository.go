@@ -17,9 +17,21 @@ type UserRepository struct {
 // GetUserByEmail implements UserRepositoryInterface.
 func (u *UserRepository) GetUserByEmail(ctx context.Context, email string) (*entity.UserEntity, error) {
 	modelUser := model.User{}
-	if err := u.db.Where("email = ? && is_verified = ?", email, true).Preload("Roles").First(&modelUser).Error; err != nil {
-		log.Error().Err(err).Msg("[UserRepository-GetUserByEmail] Failed to get user by email")
+	if err := u.db.Where("email = ? AND is_verified = ?", email, true).Preload("Roles").First(&modelUser).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			log.Info().Str("email", email).Msg("[UserRepository-GetUserByEmail] User not found")
+			return nil, gorm.ErrRecordNotFound
+		}
+		log.Error().Err(err).Str("email", email).Msg("[UserRepository-GetUserByEmail] Failed to get user by email")
 		return nil, err
+	}
+
+	// Check if user has roles
+	var roleName string
+	if len(modelUser.Roles) > 0 {
+		roleName = modelUser.Roles[0].Name
+	} else {
+		roleName = "user" // Default role
 	}
 
 	return &entity.UserEntity{
@@ -27,7 +39,7 @@ func (u *UserRepository) GetUserByEmail(ctx context.Context, email string) (*ent
 		Name:       modelUser.Name,
 		Email:      email,
 		Password:   modelUser.Password,
-		RoleName:   modelUser.Roles[0].Name,
+		RoleName:   roleName,
 		Address:    modelUser.Address,
 		Lat:        modelUser.Lat,
 		Lng:        modelUser.Lng,

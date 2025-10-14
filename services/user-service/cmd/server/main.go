@@ -22,7 +22,10 @@ func main() {
 	// Initialize application
 	app, err := app.NewApp(cfg)
 	if err != nil {
-		log.Fatalf("Failed to initialize app: %v", err)
+		log.Printf("⚠️  Database not available, starting server in offline mode: %v", err)
+		log.Printf("🚀 Server will start but API endpoints will return database errors")
+		log.Printf("💡 To fix: Start PostgreSQL and run migrations")
+		// Continue with nil app - handlers will handle nil gracefully
 	}
 
 	// Initialize Echo server
@@ -44,6 +47,16 @@ func main() {
 	// Uncomment when you have protected endpoints
 	// protected := e.Group("/api/v1", middleware.JWTMiddleware(cfg))
 	// protected.GET("/users/profile", userHandler.GetProfile)
+
+	// Root endpoint - redirect to health
+	e.GET("/", func(c echo.Context) error {
+		return c.JSON(200, map[string]string{
+			"message": "User Service API",
+			"version": "1.0.0",
+			"health": "/health",
+			"docs": "/api/v1",
+		})
+	})
 
 	// Health check
 	e.GET("/health", func(c echo.Context) error {
