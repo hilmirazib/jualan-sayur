@@ -16,18 +16,24 @@ cp .env.example .env
 ### 2. Setup Database
 
 ```bash
+# Build aplikasi CLI
+go build -o sayur-api cmd/server/main.go
+
 # Jalankan migrations
-go run cmd/migrate.go up
+./sayur-api migrate up
 
 # Optional: Jalankan seeds untuk data dummy
-go run cmd/migrate.go seed
+./sayur-api migrate seed
 ```
 
 ### 3. Start Server
 
 ```bash
-# Jalankan server
-go run ./cmd/server
+# Jalankan server dengan CLI
+./sayur-api start
+
+# Atau dengan custom port
+./sayur-api start --port 3000
 
 # Server akan start di port 8080 (default)
 ```
@@ -37,6 +43,139 @@ go run ./cmd/server
 ```bash
 curl http://localhost:8080/health
 ```
+
+## 🛠️ CLI Commands
+
+Aplikasi ini menggunakan CLI berbasis Cobra untuk kemudahan penggunaan. Berikut adalah command yang tersedia:
+
+### Build Aplikasi
+
+```bash
+# Build executable
+go build -o sayur-api cmd/server/main.go
+
+# Untuk Windows: sayur-api.exe
+# Untuk Linux/Mac: sayur-api (tanpa ekstensi)
+```
+
+### Command Utama
+
+#### 1. Start Server
+```bash
+# Start server dengan konfigurasi default
+./sayur-api start
+
+# Start dengan port custom
+./sayur-api start --port 3000
+
+# Start dengan environment custom
+./sayur-api start --env production
+
+# Kombinasi flags
+./sayur-api start --port 3000 --env development --verbose
+```
+
+#### 2. Database Migration
+```bash
+# Jalankan semua migration
+./sayur-api migrate up
+
+# Rollback migration terakhir
+./sayur-api migrate down
+
+# Jalankan seeding saja
+./sayur-api migrate seed
+
+# Custom migration directory
+./sayur-api migrate --dir ./custom/migrations up
+```
+
+#### 3. Konfigurasi
+```bash
+# Lihat konfigurasi aktif
+./sayur-api config
+
+# Validasi koneksi database
+./sayur-api config --validate-db
+```
+
+#### 4. Help & Version
+```bash
+# Lihat semua command
+./sayur-api --help
+
+# Lihat help spesifik command
+./sayur-api start --help
+./sayur-api migrate --help
+./sayur-api config --help
+
+# Lihat versi aplikasi
+./sayur-api --version
+```
+
+### Global Flags
+
+```bash
+# Gunakan config file custom
+./sayur-api --config ./custom.env start
+
+# Enable verbose output
+./sayur-api --verbose start
+```
+
+## 📋 Prerequisites
+
+### System Requirements
+
+- Go 1.19+ (untuk development)
+- PostgreSQL 12+
+- Environment file (`.env`) dengan konfigurasi database
+
+### Untuk Menjalankan Executable
+
+#### **Windows:**
+1. **Buka Command Prompt atau PowerShell:**
+   - Tekan `Win + R`, ketik `cmd`, tekan Enter
+   - Atau cari "Command Prompt" di Start Menu
+
+2. **Navigate ke folder project:**
+   ```cmd
+   cd C:\path\to\your\project\services\user-service
+   ```
+
+3. **Jalankan executable:**
+   ```cmd
+   sayur-api.exe --version
+   sayur-api.exe --help
+   sayur-api.exe start
+   ```
+
+#### **Linux/Mac:**
+1. **Buka Terminal:**
+   - Linux: Cari "Terminal" di aplikasi
+   - Mac: Tekan `Cmd + Space`, cari "Terminal"
+
+2. **Navigate ke folder project:**
+   ```bash
+   cd /path/to/your/project/services/user-service
+   ```
+
+3. **Berikan permission dan jalankan:**
+   ```bash
+   chmod +x sayur-api
+   ./sayur-api --version
+   ./sayur-api --help
+   ./sayur-api start
+   ```
+
+### ⚠️ **PENTING: Jangan Jalankan di Browser!**
+
+Ketika Anda klik file `sayur-api.exe` langsung dari File Explorer:
+- Windows akan bertanya "Buka dengan aplikasi apa?"
+- Pilih "Command Prompt" atau "Windows PowerShell"
+- Atau ikuti langkah manual di atas
+
+**File executable (.exe) bukan file web yang bisa dibuka di browser!**
 
 ## 📚 API Documentation
 

@@ -43,6 +43,9 @@ func (s *UserService) SignIn(ctx context.Context, req entity.UserEntity) (*entit
 	user, err := s.userRepo.GetUserByEmail(ctx, req.Email)
 	if err != nil {
 		log.Error().Err(err).Str("email", req.Email).Msg("[UserService-SignIn] Failed to get user from repository")
+		if err.Error() == "record not found" {
+			return nil, "", errors.New("user not found")
+		}
 		return nil, "", err
 	}
 

@@ -11,6 +11,10 @@ type UserRole struct {
 	DeletedAt *time.Time
 }
 
+type Tabler interface {
+	TableName() string
+}
+
 func (UserRole) TableName() string {
 	return "user_role"
 }
