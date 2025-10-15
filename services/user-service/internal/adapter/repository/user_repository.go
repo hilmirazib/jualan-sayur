@@ -114,6 +114,51 @@ func (u *UserRepository) GetRoleByName(ctx context.Context, name string) (*entit
 	}, nil
 }
 
+func (u *UserRepository) UpdateUserVerificationStatus(ctx context.Context, userID int64, isVerified bool) error {
+	if err := u.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", userID).Update("is_verified", isVerified).Error; err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Bool("is_verified", isVerified).Msg("[UserRepository-UpdateUserVerificationStatus] Failed to update user verification status")
+		return err
+	}
+
+	log.Info().Int64("user_id", userID).Bool("is_verified", isVerified).Msg("[UserRepository-UpdateUserVerificationStatus] User verification status updated successfully")
+	return nil
+}
+
+// GetUserByEmailIncludingUnverified implements UserRepositoryInterface.
+func (u *UserRepository) GetUserByEmailIncludingUnverified(ctx context.Context, email string) (*entity.UserEntity, error) {
+	modelUser := model.User{}
+	if err := u.db.Where("email = ?", email).Preload("Roles").First(&modelUser).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			log.Info().Str("email", email).Msg("[UserRepository-GetUserByEmailIncludingUnverified] User not found")
+			return nil, gorm.ErrRecordNotFound
+		}
+		log.Error().Err(err).Str("email", email).Msg("[UserRepository-GetUserByEmailIncludingUnverified] Failed to get user by email")
+		return nil, err
+	}
+
+	// Check if user has roles
+	var roleName string
+	if len(modelUser.Roles) > 0 {
+		roleName = modelUser.Roles[0].Name
+	} else {
+		roleName = "user" // Default role
+	}
+
+	return &entity.UserEntity{
+		ID:         modelUser.ID,
+		Name:       modelUser.Name,
+		Email:      email,
+		Password:   modelUser.Password,
+		RoleName:   roleName,
+		Address:    modelUser.Address,
+		Lat:        modelUser.Lat,
+		Lng:        modelUser.Lng,
+		Phone:      modelUser.Phone,
+		Photo:      modelUser.Photo,
+		IsVerified: modelUser.IsVerified,
+	}, nil
+}
+
 func NewUserRepository(db *gorm.DB) port.UserRepositoryInterface {
 	return &UserRepository{db: db}
 }

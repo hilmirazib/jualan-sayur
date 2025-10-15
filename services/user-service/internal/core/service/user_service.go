@@ -104,8 +104,8 @@ func (s *UserService) CreateUserAccount(ctx context.Context, email, name, passwo
 	email = strings.ToLower(strings.TrimSpace(email))
 	name = strings.TrimSpace(name)
 
-	// Check if email already exists
-	existingUser, err := s.userRepo.GetUserByEmail(ctx, email)
+	// Check if email already exists (including unverified users)
+	existingUser, err := s.userRepo.GetUserByEmailIncludingUnverified(ctx, email)
 	if err == nil && existingUser != nil {
 		log.Warn().Str("email", email).Msg("[UserService-CreateUserAccount] Email already exists")
 		return errors.New("email already exists")
@@ -164,6 +164,37 @@ func (s *UserService) CreateUserAccount(ctx context.Context, email, name, passwo
 	}
 
 	log.Info().Int64("user_id", createdUser.ID).Str("email", email).Msg("[UserService-CreateUserAccount] User account created successfully")
+	return nil
+}
+
+// VerifyUserAccount implements port.UserServiceInterface.
+func (s *UserService) VerifyUserAccount(ctx context.Context, token string) error {
+	// Get verification token
+	verificationToken, err := s.verificationTokenRepo.GetVerificationToken(ctx, token)
+	if err != nil {
+		if err.Error() == "record not found" {
+			log.Warn().Str("token", token).Msg("[UserService-VerifyUserAccount] Verification token not found or expired")
+			return errors.New("invalid or expired verification token")
+		}
+		log.Error().Err(err).Str("token", token).Msg("[UserService-VerifyUserAccount] Failed to get verification token")
+		return errors.New("failed to verify token")
+	}
+
+	// Update user verification status
+	err = s.userRepo.UpdateUserVerificationStatus(ctx, verificationToken.UserID, true)
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", verificationToken.UserID).Msg("[UserService-VerifyUserAccount] Failed to update user verification status")
+		return errors.New("failed to verify account")
+	}
+
+	// Delete used verification token (one-time use)
+	err = s.verificationTokenRepo.DeleteVerificationToken(ctx, token)
+	if err != nil {
+		log.Error().Err(err).Str("token", token).Msg("[UserService-VerifyUserAccount] Failed to delete verification token")
+		// Don't return error here, account is already verified
+	}
+
+	log.Info().Int64("user_id", verificationToken.UserID).Str("token", token).Msg("[UserService-VerifyUserAccount] User account verified successfully")
 	return nil
 }
 

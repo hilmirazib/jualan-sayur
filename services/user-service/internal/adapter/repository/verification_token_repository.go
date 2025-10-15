@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 	"user-service/internal/core/domain/entity"
 	"user-service/internal/core/domain/model"
 	"user-service/internal/core/port"
@@ -33,4 +34,26 @@ func (r *VerificationTokenRepository) CreateVerificationToken(ctx context.Contex
 
 	token.ID = model.ID
 	return nil
+}
+
+func (r *VerificationTokenRepository) GetVerificationToken(ctx context.Context, token string) (*entity.VerificationTokenEntity, error) {
+	modelToken := &model.VerificationToken{}
+	if err := r.db.WithContext(ctx).Where("token = ? AND expires_at > ?", token, time.Now()).First(modelToken).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, gorm.ErrRecordNotFound
+		}
+		return nil, err
+	}
+
+	return &entity.VerificationTokenEntity{
+		ID:        modelToken.ID,
+		UserID:    modelToken.UserID,
+		Token:     modelToken.Token,
+		TokenType: modelToken.TokenType,
+		ExpiresAt: modelToken.ExpiresAt,
+	}, nil
+}
+
+func (r *VerificationTokenRepository) DeleteVerificationToken(ctx context.Context, token string) error {
+	return r.db.WithContext(ctx).Where("token = ?", token).Delete(&model.VerificationToken{}).Error
 }

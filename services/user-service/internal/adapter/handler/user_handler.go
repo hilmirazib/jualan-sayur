@@ -6,7 +6,9 @@ import (
 	"user-service/internal/adapter/handler/response"
 	"user-service/internal/core/domain/entity"
 	"user-service/internal/core/port"
-	"user-service/utils/validator"
+
+	"github.com/go-playground/validator/v10"
+	myvalidator "user-service/utils/validator"
 
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
@@ -15,12 +17,13 @@ import (
 type UserHandlerInterface interface {
 	SignIn(ctx echo.Context) error
 	CreateUserAccount(ctx echo.Context) error
+	VerifyUserAccount(ctx echo.Context) error
 	AdminCheck(ctx echo.Context) error
 }
 
 type UserHandler struct {
 	userService port.UserServiceInterface
-	validator   *validator.Validator
+	validator   *myvalidator.Validator
 }
 
 func (u *UserHandler) SignIn(c echo.Context) error {
@@ -140,6 +143,68 @@ func (u *UserHandler) CreateUserAccount(c echo.Context) error {
 	// Validate request using go-playground/validator
 	if err := u.validator.Validate(&req); err != nil {
 		log.Error().Err(err).Msg("[UserHandler-CreateUserAccount] Validation failed")
+
+		// Handle specific validation errors with clear messages
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			for _, fieldError := range validationErrors {
+				fieldName := fieldError.Field()
+				tag := fieldError.Tag()
+
+				switch fieldName {
+				case "Email":
+					if tag == "email" {
+						resp.Message = "Invalid email format"
+						resp.Data = nil
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+					if tag == "required" {
+						resp.Message = "Email is required"
+						resp.Data = nil
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+				case "Name":
+					if tag == "required" {
+						resp.Message = "Name is required"
+						resp.Data = nil
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+					if tag == "min" {
+						resp.Message = "Name must be at least 2 characters long"
+						resp.Data = nil
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+					if tag == "max" {
+						resp.Message = "Name must not exceed 100 characters"
+						resp.Data = nil
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+				case "Password":
+					if tag == "required" {
+						resp.Message = "Password is required"
+						resp.Data = nil
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+					if tag == "min" {
+						resp.Message = "Password must be at least 8 characters long"
+						resp.Data = nil
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+				case "PasswordConfirmation":
+					if tag == "required" {
+						resp.Message = "Password confirmation is required"
+						resp.Data = nil
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+					if tag == "eqfield" {
+						resp.Message = "Password confirmation does not match"
+						resp.Data = nil
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+				}
+			}
+		}
+
+		// Fallback for other validation errors
 		resp.Message = "Validation failed"
 		resp.Data = nil
 		return c.JSON(http.StatusUnprocessableEntity, resp)
@@ -187,9 +252,55 @@ func (u *UserHandler) CreateUserAccount(c echo.Context) error {
 	return c.JSON(http.StatusCreated, resp)
 }
 
+// VerifyUserAccount handles email verification
+func (u *UserHandler) VerifyUserAccount(c echo.Context) error {
+	var (
+		resp = response.DefaultResponse{}
+		ctx  = c.Request().Context()
+	)
+
+	// Get token from query parameter
+	token := c.QueryParam("token")
+	if token == "" {
+		log.Warn().Msg("[UserHandler-VerifyUserAccount] Missing verification token")
+		resp.Message = "Verification token is required"
+		resp.Data = nil
+		return c.JSON(http.StatusBadRequest, resp)
+	}
+
+	// Call service
+	err := u.userService.VerifyUserAccount(ctx, token)
+	if err != nil {
+		log.Error().Err(err).Str("token", token).Msg("[UserHandler-VerifyUserAccount] Account verification failed")
+
+		// Handle different error types
+		switch err.Error() {
+		case "invalid or expired verification token":
+			resp.Message = "Invalid or expired verification token"
+			resp.Data = nil
+			return c.JSON(http.StatusBadRequest, resp)
+		case "failed to verify token", "failed to verify account":
+			resp.Message = "Failed to verify account"
+			resp.Data = nil
+			return c.JSON(http.StatusInternalServerError, resp)
+		default:
+			resp.Message = "Internal server error"
+			resp.Data = nil
+			return c.JSON(http.StatusInternalServerError, resp)
+		}
+	}
+
+	resp.Message = "Account verified successfully. You can now sign in."
+	resp.Data = nil
+
+	log.Info().Str("token", token).Msg("[UserHandler-VerifyUserAccount] User account verified successfully")
+
+	return c.JSON(http.StatusOK, resp)
+}
+
 func NewUserHandler(userService port.UserServiceInterface) UserHandlerInterface {
 	return &UserHandler{
 		userService: userService,
-		validator:   validator.NewValidator(),
+		validator:   myvalidator.NewValidator(),
 	}
 }

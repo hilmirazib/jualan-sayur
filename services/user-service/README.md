@@ -231,6 +231,39 @@ Ketika Anda klik file `sayur-api.exe` langsung dari File Explorer:
 }
 ```
 
+### Verify User Account
+
+**Endpoint:** `GET /api/v1/auth/verify?token=:token`
+
+**Query Parameters:**
+- `token`: Verification token received via email
+
+**Success Response (200):**
+```json
+{
+  "message": "Account verified successfully. You can now sign in.",
+  "data": null
+}
+```
+
+**Error Responses:**
+
+**400 Bad Request - Invalid Token:**
+```json
+{
+  "message": "Invalid or expired verification token",
+  "data": null
+}
+```
+
+**500 Internal Server Error:**
+```json
+{
+  "message": "Internal server error",
+  "data": null
+}
+```
+
 ### Sign In
 
 **Endpoint:** `POST /api/v1/auth/signin`

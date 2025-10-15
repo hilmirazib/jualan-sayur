@@ -41,6 +41,19 @@ func (m *MockUserRepository) GetRoleByName(ctx context.Context, name string) (*e
 	return args.Get(0).(*entity.RoleEntity), args.Error(1)
 }
 
+func (m *MockUserRepository) UpdateUserVerificationStatus(ctx context.Context, userID int64, isVerified bool) error {
+	args := m.Called(ctx, userID, isVerified)
+	return args.Error(0)
+}
+
+func (m *MockUserRepository) GetUserByEmailIncludingUnverified(ctx context.Context, email string) (*entity.UserEntity, error) {
+	args := m.Called(ctx, email)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.UserEntity), args.Error(1)
+}
+
 func TestUserService_SignIn_Success(t *testing.T) {
 	// Setup
 	mockRepo := new(MockUserRepository)
