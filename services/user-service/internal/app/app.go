@@ -70,14 +70,17 @@ func RunServer() {
 	// Initialize handlers
 	userHandler := handler.NewUserHandler(app.UserService)
 
+	// Initialize session repository for middleware
+	redisClient := cfg.RedisClient()
+	sessionRepo := repository.NewSessionRepository(redisClient, cfg)
+
 	// Public routes (no authentication required)
 	public := e.Group("/api/v1")
 	public.POST("/auth/signin", userHandler.SignIn)
 
 	// Protected routes (authentication required)
-	// Uncomment when you have protected endpoints
-	// protected := e.Group("/api/v1", middleware.JWTMiddleware(cfg))
-	// protected.GET("/users/profile", userHandler.GetProfile)
+	admin := e.Group("/api/v1/admin", middleware.JWTMiddleware(cfg, sessionRepo))
+	admin.GET("/check", userHandler.AdminCheck)
 
 	// Root endpoint - redirect to health
 	e.GET("/", func(c echo.Context) error {
@@ -143,10 +146,10 @@ func NewApp(cfg *config.Config) (*App, error) {
 	sessionRepo := repository.NewSessionRepository(redisClient, cfg)
 
 	// Initialize utilities
-	jwtUtil := utils.JWTUtil{}
+	jwtUtil := utils.NewJWTUtil(cfg)
 
 	// Initialize services
-	userService := service.NewUserService(userRepo, sessionRepo, &jwtUtil, cfg)
+	userService := service.NewUserService(userRepo, sessionRepo, jwtUtil, cfg)
 
 	return &App{
 		UserService: userService,

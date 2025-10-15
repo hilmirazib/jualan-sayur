@@ -77,19 +77,28 @@ func ValidateJWT(cfg *config.Config, tokenString string) (*JWTClaims, error) {
 }
 
 // JWTUtil implements JWTInterface
-type JWTUtil struct{}
+type JWTUtil struct {
+	config *config.Config
+}
+
+// NewJWTUtil creates a new JWTUtil instance
+func NewJWTUtil(cfg *config.Config) *JWTUtil {
+	return &JWTUtil{
+		config: cfg,
+	}
+}
 
 // GenerateJWT generates a JWT token for the user
 func (j *JWTUtil) GenerateJWT(userID int64, email, roleName string) (string, error) {
-	return GenerateJWT(nil, userID, email, roleName)
+	return GenerateJWT(j.config, userID, email, roleName)
 }
 
 // GenerateJWTWithSession generates a JWT token with session ID for the user
 func (j *JWTUtil) GenerateJWTWithSession(userID int64, email, roleName, sessionID string) (string, error) {
-	return GenerateJWTWithSession(nil, userID, email, roleName, sessionID)
+	return GenerateJWTWithSession(j.config, userID, email, roleName, sessionID)
 }
 
 // ValidateJWT validates and parses a JWT token
 func (j *JWTUtil) ValidateJWT(tokenString string) (*JWTClaims, error) {
-	return ValidateJWT(nil, tokenString)
+	return ValidateJWT(j.config, tokenString)
 }

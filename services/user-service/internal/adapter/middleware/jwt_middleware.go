@@ -4,22 +4,24 @@ import (
 	"net/http"
 	"strings"
 	"user-service/config"
+	"user-service/internal/core/port"
 	"user-service/utils"
 
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
 )
 
-// JWTMiddleware creates JWT authentication middleware
-func JWTMiddleware(cfg *config.Config) echo.MiddlewareFunc {
+// JWTMiddleware creates JWT authentication middleware with Redis session validation
+func JWTMiddleware(cfg *config.Config, sessionRepo port.SessionInterface) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// Get token from Authorization header
 			authHeader := c.Request().Header.Get("Authorization")
 			if authHeader == "" {
 				log.Warn().Msg("[JWTMiddleware] Missing authorization header")
-				return c.JSON(http.StatusUnauthorized, map[string]string{
+				return c.JSON(http.StatusUnauthorized, map[string]interface{}{
 					"message": "Authorization header required",
+					"data":    nil,
 				})
 			}
 
@@ -27,32 +29,56 @@ func JWTMiddleware(cfg *config.Config) echo.MiddlewareFunc {
 			tokenParts := strings.Split(authHeader, " ")
 			if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
 				log.Warn().Str("auth_header", authHeader).Msg("[JWTMiddleware] Invalid authorization header format")
-				return c.JSON(http.StatusUnauthorized, map[string]string{
+				return c.JSON(http.StatusUnauthorized, map[string]interface{}{
 					"message": "Invalid authorization header format. Use: Bearer <token>",
+					"data":    nil,
 				})
 			}
 
 			tokenString := tokenParts[1]
 
-			// Validate token
+			// Validate JWT signature first
 			claims, err := utils.ValidateJWT(cfg, tokenString)
 			if err != nil {
-				log.Warn().Err(err).Msg("[JWTMiddleware] Invalid token")
-				return c.JSON(http.StatusUnauthorized, map[string]string{
+				log.Warn().Err(err).Msg("[JWTMiddleware] Invalid JWT signature")
+				return c.JSON(http.StatusUnauthorized, map[string]interface{}{
 					"message": "Invalid or expired token",
+					"data":    nil,
 				})
+			}
+
+			// Validate session in Redis
+			if claims.SessionID != "" {
+				isValid := sessionRepo.ValidateToken(c.Request().Context(), claims.UserID, claims.SessionID, tokenString)
+				if !isValid {
+					log.Warn().
+						Int64("user_id", claims.UserID).
+						Str("session_id", claims.SessionID).
+						Msg("[JWTMiddleware] Session not found in Redis")
+					return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+						"message": "Session expired or invalid",
+						"data":    nil,
+					})
+				}
+			} else {
+				// For backward compatibility, if no session_id in token, still allow
+				log.Warn().
+					Int64("user_id", claims.UserID).
+					Msg("[JWTMiddleware] Token without session_id (backward compatibility)")
 			}
 
 			// Set user information in context
 			c.Set("user_id", claims.UserID)
 			c.Set("user_email", claims.Email)
 			c.Set("user_role", claims.RoleName)
+			c.Set("session_id", claims.SessionID)
 
 			log.Info().
 				Int64("user_id", claims.UserID).
 				Str("email", claims.Email).
 				Str("role", claims.RoleName).
-				Msg("[JWTMiddleware] Token validated successfully")
+				Str("session_id", claims.SessionID).
+				Msg("[JWTMiddleware] Token and session validated successfully")
 
 			return next(c)
 		}

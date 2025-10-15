@@ -14,6 +14,7 @@ import (
 
 type UserHandlerInterface interface {
 	SignIn(ctx echo.Context) error
+	AdminCheck(ctx echo.Context) error
 }
 
 type UserHandler struct {
@@ -85,6 +86,35 @@ func (u *UserHandler) SignIn(c echo.Context) error {
 	resp.Data = respSignIn
 
 	log.Info().Str("email", req.Email).Int64("user_id", user.ID).Msg("[UserHandler-SignIn] User signed in successfully")
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+// AdminCheck handles admin authentication check
+func (u *UserHandler) AdminCheck(c echo.Context) error {
+	// Get user information from context (set by middleware)
+	userID := c.Get("user_id").(int64)
+	email := c.Get("user_email").(string)
+	role := c.Get("user_role").(string)
+	sessionID := c.Get("session_id").(string)
+
+	// Build response
+	resp := map[string]interface{}{
+		"message": "Authentication successful",
+		"data": map[string]interface{}{
+			"user_id":    userID,
+			"email":      email,
+			"role":       role,
+			"session_id": sessionID,
+		},
+	}
+
+	log.Info().
+		Int64("user_id", userID).
+		Str("email", email).
+		Str("role", role).
+		Str("session_id", sessionID).
+		Msg("[UserHandler-AdminCheck] Admin authentication check successful")
 
 	return c.JSON(http.StatusOK, resp)
 }

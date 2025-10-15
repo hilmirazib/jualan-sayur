@@ -24,7 +24,8 @@ func main() {
 
 	dir := flag.String("dir", "database/migrations", "migrations directory")
 	dsn := flag.String("dsn", "", "database URL (overrides .env)")
-	cmd := flag.String("cmd", "up", "migration command: up/down")
+	cmd := flag.String("cmd", "up", "migration command: up/down/force")
+	version := flag.Int("version", 0, "migration version for force command")
 	flag.Parse()
 
 	var databaseURL string
@@ -58,6 +59,14 @@ func main() {
 		if err := m.Down(); err != nil {
 			log.Fatalf("migrate down failed: %v", err)
 		}
+	case "force":
+		if *version == 0 {
+			log.Fatalf("version must be specified for force command")
+		}
+		if err := m.Force(*version); err != nil {
+			log.Fatalf("migrate force failed: %v", err)
+		}
+		log.Printf("Database version forced to %d", *version)
 	case "seed":
 		runSeeds(databaseURL)
 	default:

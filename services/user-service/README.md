@@ -253,12 +253,77 @@ go test -v ./internal/core/service/
 curl -X POST http://localhost:8080/api/v1/auth/signin \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "user@example.com",
+    "email": "john@example.com",
     "password": "password123"
   }'
 ```
 
-#### 2. Sign In - Invalid Email
+**Response (200):**
+```json
+{
+  "message": "Sign in successful",
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "role": "user",
+    "id": 2,
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "+628123456789",
+    "lat": "-6.2088",
+    "lng": "106.8456"
+  }
+}
+```
+
+#### 2. Admin Check - dengan JWT Token
+```bash
+curl -X GET http://localhost:8080/api/v1/admin/check \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
+```
+
+**Response (200):**
+```json
+{
+  "message": "Authentication successful",
+  "data": {
+    "user_id": 2,
+    "email": "john@example.com",
+    "role": "user",
+    "session_id": "sess_1760512487974112400"
+  }
+}
+```
+
+#### 3. Admin Check - tanpa Token
+```bash
+curl -X GET http://localhost:8080/api/v1/admin/check
+```
+
+**Response (401):**
+```json
+{
+  "message": "Authorization header required",
+  "data": null
+}
+```
+
+**Response (401) - Invalid Token:**
+```json
+{
+  "message": "Invalid or expired token",
+  "data": null
+}
+```
+
+**Response (401) - Session Expired:**
+```json
+{
+  "message": "Session expired or invalid",
+  "data": null
+}
+```
+
+#### 4. Sign In - Invalid Email
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/signin \
   -H "Content-Type: application/json" \
@@ -268,7 +333,7 @@ curl -X POST http://localhost:8080/api/v1/auth/signin \
   }'
 ```
 
-#### 3. Sign In - User Not Found
+#### 5. Sign In - User Not Found
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/signin \
   -H "Content-Type: application/json" \
@@ -278,14 +343,42 @@ curl -X POST http://localhost:8080/api/v1/auth/signin \
   }'
 ```
 
-#### 4. Sign In - Wrong Password
+#### 6. Sign In - Wrong Password
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/signin \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "user@example.com",
+    "email": "john@example.com",
     "password": "wrongpassword"
   }'
+```
+
+### Cek JWT Token di Redis
+
+Setelah berhasil sign in, cek apakah token tersimpan di Redis:
+
+#### 1. Cek jumlah keys di Redis
+```bash
+redis-cli dbsize
+# Output: (integer) 2
+```
+
+#### 2. Scan session keys
+```bash
+redis-cli --scan --pattern "session:*"
+# Output: "session:2:sess_1760512487974112400"
+```
+
+#### 3. Lihat JWT token
+```bash
+redis-cli get "session:2:sess_1760512487974112400"
+# Output: JWT token lengkap
+```
+
+#### 4. Lihat session info
+```bash
+redis-cli hgetall "user_sessions:2"
+# Output: JSON dengan session details
 ```
 
 ### API Testing dengan Postman
@@ -302,13 +395,15 @@ curl -X POST http://localhost:8080/api/v1/auth/signin \
    - ❌ Empty email → Should return 400
    - ❌ User not found → Should return 404
    - ❌ Wrong password → Should return 401
+   - ✅ Admin check with token → Should return 200 with user data
+   - ❌ Admin check without token → Should return 401 with `"data": null`
 
 ### Using JWT Token
 
 Setelah mendapat token dari Sign In, gunakan untuk API yang protected:
 
 ```bash
-curl -X GET http://localhost:8080/api/v1/protected-endpoint \
+curl -X GET http://localhost:8080/api/v1/admin/check \
   -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
 ```
 
