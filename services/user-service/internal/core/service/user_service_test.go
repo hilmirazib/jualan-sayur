@@ -6,6 +6,7 @@ import (
 	"testing"
 	"user-service/config"
 	"user-service/internal/core/domain/entity"
+	"user-service/utils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -63,14 +64,52 @@ func (m *MockSessionRepository) StoreToken(ctx context.Context, userID int64, se
 	return args.Error(0)
 }
 
+func (m *MockSessionRepository) GetToken(ctx context.Context, userID int64, sessionID string) (string, error) {
+	args := m.Called(ctx, userID, sessionID)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockSessionRepository) DeleteToken(ctx context.Context, userID int64, sessionID string) error {
+	args := m.Called(ctx, userID, sessionID)
+	return args.Error(0)
+}
+
+func (m *MockSessionRepository) DeleteAllUserTokens(ctx context.Context, userID int64) error {
+	args := m.Called(ctx, userID)
+	return args.Error(0)
+}
+
+func (m *MockSessionRepository) ValidateToken(ctx context.Context, userID int64, sessionID string, token string) bool {
+	args := m.Called(ctx, userID, sessionID, token)
+	return args.Bool(0)
+}
+
+func (m *MockSessionRepository) GetUserSessions(ctx context.Context, userID int64) ([]entity.SessionInfo, error) {
+	args := m.Called(ctx, userID)
+	return args.Get(0).([]entity.SessionInfo), args.Error(1)
+}
+
 // Mock JWT utility
 type MockJWTUtil struct {
 	mock.Mock
 }
 
+func (m *MockJWTUtil) GenerateJWT(userID int64, email, roleName string) (string, error) {
+	args := m.Called(userID, email, roleName)
+	return args.String(0), args.Error(1)
+}
+
 func (m *MockJWTUtil) GenerateJWTWithSession(userID int64, email, role, sessionID string) (string, error) {
 	args := m.Called(userID, email, role, sessionID)
 	return args.String(0), args.Error(1)
+}
+
+func (m *MockJWTUtil) ValidateJWT(tokenString string) (*utils.JWTClaims, error) {
+	args := m.Called(tokenString)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*utils.JWTClaims), args.Error(1)
 }
 
 // Mock verification token repository
@@ -227,4 +266,53 @@ func TestUserService_VerifyUserAccount_Success(t *testing.T) {
 	assert.NoError(t, err)
 	mockUserRepo.AssertExpectations(t)
 	mockVerificationTokenRepo.AssertExpectations(t)
+}
+
+func TestUserService_AdminCheck_Success(t *testing.T) {
+	// Setup
+	mockUserRepo := new(MockUserRepository)
+	mockSessionRepo := new(MockSessionRepository)
+	mockJWTUtil := new(MockJWTUtil)
+	mockConfig := &config.Config{
+		App: config.App{
+			JwtSecretKey: "test-secret-key",
+			JwtIssuer:    "test-issuer",
+		},
+	}
+	service := NewUserService(mockUserRepo, mockSessionRepo, mockJWTUtil, nil, nil, mockConfig)
+
+	ctx := context.Background()
+	email := "admin@example.com"
+	password := "adminpass123"
+
+	// Hash the password for the mock admin user
+	hashedPassword, _ := utils.HashPassword(password)
+	adminUser := &entity.UserEntity{
+		ID:       1,
+		Email:    email,
+		Password: hashedPassword,
+		RoleName: "admin",
+		Name:     "Admin User",
+	}
+
+	// Mock expectations
+	mockUserRepo.On("GetUserByEmail", ctx, email).Return(adminUser, nil)
+	mockJWTUtil.On("GenerateJWTWithSession", int64(1), email, "admin", mock.AnythingOfType("string")).Return("admin-jwt-token", nil)
+	mockSessionRepo.On("StoreToken", ctx, int64(1), mock.AnythingOfType("string"), "admin-jwt-token").Return(nil)
+
+	// Execute
+	user, token, err := service.SignIn(ctx, entity.UserEntity{
+		Email:    email,
+		Password: password,
+	})
+
+	// Assert
+	assert.NoError(t, err)
+	assert.NotNil(t, user)
+	assert.NotEmpty(t, token)
+	assert.Equal(t, "admin", user.RoleName)
+	assert.Equal(t, "admin-jwt-token", token)
+	mockUserRepo.AssertExpectations(t)
+	mockSessionRepo.AssertExpectations(t)
+	mockJWTUtil.AssertExpectations(t)
 }
