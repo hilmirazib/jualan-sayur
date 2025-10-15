@@ -179,6 +179,58 @@ Ketika Anda klik file `sayur-api.exe` langsung dari File Explorer:
 
 ## 📚 API Documentation
 
+### Sign Up (Create User Account)
+
+**Endpoint:** `POST /api/v1/auth/signup`
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "name": "John Doe",
+  "password": "password123",
+  "password_confirmation": "password123"
+}
+```
+
+**Success Response (201):**
+```json
+{
+  "message": "Account created successfully. Please check your email for verification.",
+  "data": {
+    "id": 1,
+    "name": "John Doe",
+    "email": "user@example.com"
+  }
+}
+```
+
+**Error Responses:**
+
+**422 Unprocessable Entity - Validation Failed:**
+```json
+{
+  "message": "Validation failed",
+  "data": null
+}
+```
+
+**409 Conflict - Email Already Exists:**
+```json
+{
+  "message": "Email already exists",
+  "data": null
+}
+```
+
+**500 Internal Server Error:**
+```json
+{
+  "message": "Internal server error",
+  "data": null
+}
+```
+
 ### Sign In
 
 **Endpoint:** `POST /api/v1/auth/signin`
@@ -248,7 +300,31 @@ go test -v ./internal/core/service/
 
 ### API Testing dengan cURL
 
-#### 1. Sign In - Success
+#### 1. Sign Up - Create User Account
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "newuser@example.com",
+    "name": "New User",
+    "password": "password123",
+    "password_confirmation": "password123"
+  }'
+```
+
+**Response (201):**
+```json
+{
+  "message": "Account created successfully. Please check your email for verification.",
+  "data": {
+    "id": 1,
+    "name": "New User",
+    "email": "newuser@example.com"
+  }
+}
+```
+
+#### 2. Sign In - Success
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/signin \
   -H "Content-Type: application/json" \
@@ -442,13 +518,26 @@ JWT_SECRET_KEY=your-super-secret-jwt-key-here
 JWT_ISSUER=user-service
 
 # Database Configuration
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=password
-DB_NAME=user_service
-DB_MAX_OPEN_CONNS=10
-DB_MAX_IDLE_CONNS=5
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_USER=sayur_user
+DATABASE_PASSWORD=sayur_password
+DATABASE_NAME=sayur_db
+DATABASE_MAX_OPEN_CONNECTION=10
+DATABASE_MAX_IDLE_CONNECTION=20
+
+# Redis Configuration
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB=0
+
+# RabbitMQ Configuration
+RABBITMQ_HOST=localhost
+RABBITMQ_PORT=5672
+RABBITMQ_USER=sayur_user
+RABBITMQ_PASSWORD=sayur_password
+RABBITMQ_VHOST=/
 ```
 
 ## 📦 Dependencies
@@ -462,12 +551,58 @@ DB_MAX_IDLE_CONNS=5
 
 ## 🐳 Docker
 
+### Docker Compose (Recommended)
+
+```bash
+# Start all services (PostgreSQL, Redis, RabbitMQ)
+docker-compose up -d
+
+# Check running containers
+docker-compose ps
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+### Manual Docker Commands
+
 ```bash
 # Build image
 docker build -t user-service .
 
 # Run container
 docker run -p 8080:8080 --env-file .env user-service
+```
+
+### Monitoring Services
+
+#### RabbitMQ Management UI
+- **URL:** http://localhost:15672
+- **Username:** sayur_user
+- **Password:** sayur_password
+- **Check queues:** email_queue
+
+#### Database Admin (Adminer)
+- **URL:** http://localhost:8081
+- **System:** PostgreSQL
+- **Server:** postgres (atau localhost jika local)
+- **Username:** sayur_user
+- **Password:** sayur_password
+- **Database:** sayur_db
+
+#### Redis CLI
+```bash
+# Connect to Redis
+docker exec -it sayur-redis redis-cli
+
+# Check keys
+KEYS *
+
+# Check sessions
+SCAN 0 MATCH session:*
 ```
 
 ## 📝 Development

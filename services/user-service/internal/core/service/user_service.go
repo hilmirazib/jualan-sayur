@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -20,18 +22,22 @@ var (
 )
 
 type UserService struct {
-	userRepo    port.UserRepositoryInterface
-	sessionRepo port.SessionInterface
-	jwtUtil     port.JWTInterface
-	config      *config.Config
+	userRepo             port.UserRepositoryInterface
+	sessionRepo          port.SessionInterface
+	jwtUtil              port.JWTInterface
+	verificationTokenRepo port.VerificationTokenInterface
+	emailPublisher       port.EmailInterface
+	config               *config.Config
 }
 
-func NewUserService(userRepo port.UserRepositoryInterface, sessionRepo port.SessionInterface, jwtUtil port.JWTInterface, cfg *config.Config) port.UserServiceInterface {
+func NewUserService(userRepo port.UserRepositoryInterface, sessionRepo port.SessionInterface, jwtUtil port.JWTInterface, verificationTokenRepo port.VerificationTokenInterface, emailPublisher port.EmailInterface, cfg *config.Config) port.UserServiceInterface {
 	return &UserService{
-		userRepo:    userRepo,
-		sessionRepo: sessionRepo,
-		jwtUtil:     jwtUtil,
-		config:      cfg,
+		userRepo:             userRepo,
+		sessionRepo:          sessionRepo,
+		jwtUtil:              jwtUtil,
+		verificationTokenRepo: verificationTokenRepo,
+		emailPublisher:       emailPublisher,
+		config:               cfg,
 	}
 }
 
@@ -81,6 +87,86 @@ func (s *UserService) SignIn(ctx context.Context, req entity.UserEntity) (*entit
 	return user, token, nil
 }
 
+// CreateUserAccount implements port.UserServiceInterface.
+func (s *UserService) CreateUserAccount(ctx context.Context, email, name, password, passwordConfirmation string) error {
+	// Input validation
+	if err := s.validateEmail(email); err != nil {
+		log.Error().Err(err).Str("email", email).Msg("[UserService-CreateUserAccount] Invalid email format")
+		return err
+	}
+
+	if err := s.validatePassword(password, passwordConfirmation); err != nil {
+		log.Error().Err(err).Str("email", email).Msg("[UserService-CreateUserAccount] Password validation failed")
+		return err
+	}
+
+	// Normalize email
+	email = strings.ToLower(strings.TrimSpace(email))
+	name = strings.TrimSpace(name)
+
+	// Check if email already exists
+	existingUser, err := s.userRepo.GetUserByEmail(ctx, email)
+	if err == nil && existingUser != nil {
+		log.Warn().Str("email", email).Msg("[UserService-CreateUserAccount] Email already exists")
+		return errors.New("email already exists")
+	}
+
+	// Hash password
+	hashedPassword, err := utils.HashPassword(password)
+	if err != nil {
+		log.Error().Err(err).Str("email", email).Msg("[UserService-CreateUserAccount] Failed to hash password")
+		return errors.New("failed to process password")
+	}
+
+	// Create user entity
+	userEntity := &entity.UserEntity{
+		Name:     name,
+		Email:    email,
+		Password: hashedPassword,
+		IsVerified: false, // User is not verified initially
+	}
+
+	// Create user in database
+	createdUser, err := s.userRepo.CreateUser(ctx, userEntity)
+	if err != nil {
+		log.Error().Err(err).Str("email", email).Msg("[UserService-CreateUserAccount] Failed to create user")
+		return errors.New("failed to create account")
+	}
+
+	// Generate verification token
+	token, err := s.generateVerificationToken()
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", createdUser.ID).Msg("[UserService-CreateUserAccount] Failed to generate verification token")
+		return errors.New("failed to generate verification token")
+	}
+
+	// Create verification token entity
+	verificationToken := &entity.VerificationTokenEntity{
+		UserID:    createdUser.ID,
+		Token:     token,
+		TokenType: "email_verification",
+		ExpiresAt: time.Now().Add(24 * time.Hour), // Token expires in 24 hours
+	}
+
+	// Save verification token
+	err = s.verificationTokenRepo.CreateVerificationToken(ctx, verificationToken)
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", createdUser.ID).Msg("[UserService-CreateUserAccount] Failed to save verification token")
+		return errors.New("failed to create verification token")
+	}
+
+	// Send verification email
+	err = s.emailPublisher.SendVerificationEmail(ctx, email, token)
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", createdUser.ID).Str("email", email).Msg("[UserService-CreateUserAccount] Failed to send verification email")
+		// Don't return error here, account is created but email failed
+		log.Warn().Int64("user_id", createdUser.ID).Msg("[UserService-CreateUserAccount] Account created but email sending failed")
+	}
+
+	log.Info().Int64("user_id", createdUser.ID).Str("email", email).Msg("[UserService-CreateUserAccount] User account created successfully")
+	return nil
+}
+
 // validateEmail performs basic email validation
 func (s *UserService) validateEmail(email string) error {
 	if email == "" {
@@ -98,4 +184,30 @@ func (s *UserService) validateEmail(email string) error {
 	}
 
 	return nil
+}
+
+// validatePassword validates password and confirmation
+func (s *UserService) validatePassword(password, confirmation string) error {
+	if password == "" {
+		return errors.New("password is required")
+	}
+
+	if len(password) < 8 {
+		return errors.New("password must be at least 8 characters long")
+	}
+
+	if password != confirmation {
+		return errors.New("password confirmation does not match")
+	}
+
+	return nil
+}
+
+// generateVerificationToken generates a secure random token
+func (s *UserService) generateVerificationToken() (string, error) {
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }

@@ -7,4 +7,5 @@ import (
 
 type UserServiceInterface interface {
 	SignIn(ctx context.Context, req entity.UserEntity) (*entity.UserEntity, string, error)
+	CreateUserAccount(ctx context.Context, email, name, password, passwordConfirmation string) error
 }

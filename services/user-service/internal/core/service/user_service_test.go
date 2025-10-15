@@ -25,6 +25,22 @@ func (m *MockUserRepository) GetUserByEmail(ctx context.Context, email string) (
 	return args.Get(0).(*entity.UserEntity), args.Error(1)
 }
 
+func (m *MockUserRepository) CreateUser(ctx context.Context, user *entity.UserEntity) (*entity.UserEntity, error) {
+	args := m.Called(ctx, user)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.UserEntity), args.Error(1)
+}
+
+func (m *MockUserRepository) GetRoleByName(ctx context.Context, name string) (*entity.RoleEntity, error) {
+	args := m.Called(ctx, name)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.RoleEntity), args.Error(1)
+}
+
 func TestUserService_SignIn_Success(t *testing.T) {
 	// Setup
 	mockRepo := new(MockUserRepository)

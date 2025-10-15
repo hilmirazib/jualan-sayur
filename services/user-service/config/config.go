@@ -21,9 +21,10 @@ type PsqlDB struct {
 }
 
 type Config struct {
-	App    App        `json:"app"`
-	PsqlDB PsqlDB     `json:"psql_db"`
-	Redis  RedisConfig `json:"redis"`
+	App     App         `json:"app"`
+	PsqlDB  PsqlDB      `json:"psql_db"`
+	Redis   RedisConfig `json:"redis"`
+	RabbitMQ RabbitMQ   `json:"rabbitmq"`
 }
 
 func NewConfig() *Config {
@@ -54,6 +55,13 @@ func NewConfig() *Config {
 			Port:     viper.GetString("REDIS_PORT"),
 			Password: viper.GetString("REDIS_PASSWORD"),
 			DB:       viper.GetInt("REDIS_DB"),
+		},
+		RabbitMQ: RabbitMQ{
+			Host:     viper.GetString("RABBITMQ_HOST"),
+			Port:     viper.GetString("RABBITMQ_PORT"),
+			User:     viper.GetString("RABBITMQ_USER"),
+			Password: viper.GetString("RABBITMQ_PASSWORD"),
+			VHost:    viper.GetString("RABBITMQ_VHOST"),
 		},
 	}
 }

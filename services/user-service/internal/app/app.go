@@ -11,6 +11,7 @@ import (
 	"time"
 	"user-service/config"
 	"user-service/internal/adapter/handler"
+	"user-service/internal/adapter/message"
 	"user-service/internal/adapter/middleware"
 	"user-service/internal/adapter/repository"
 	"user-service/internal/core/port"
@@ -19,11 +20,17 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
+	"github.com/streadway/amqp"
+	"gorm.io/gorm"
 )
 
 // App holds all dependencies
 type App struct {
-	UserService port.UserServiceInterface
+	UserService      port.UserServiceInterface
+	UserRepo         port.UserRepositoryInterface
+	JWTUtil          port.JWTInterface
+	DB               *gorm.DB
+	RabbitMQChannel  *amqp.Channel
 	// Add other services here as they are created
 }
 
@@ -67,16 +74,24 @@ func RunServer() {
 	e.Use(middleware.CORSMiddleware())
 	e.Use(middleware.LoggerMiddleware())
 
-	// Initialize handlers
-	userHandler := handler.NewUserHandler(app.UserService)
-
-	// Initialize session repository for middleware
+	// Initialize repositories
 	redisClient := cfg.RedisClient()
 	sessionRepo := repository.NewSessionRepository(redisClient, cfg)
+	verificationTokenRepo := repository.NewVerificationTokenRepository(app.DB)
+
+	// Initialize message publishers
+	emailPublisher := message.NewEmailPublisher(app.RabbitMQChannel)
+
+	// Initialize services with new dependencies
+	app.UserService = service.NewUserService(app.UserRepo, sessionRepo, app.JWTUtil, verificationTokenRepo, emailPublisher, cfg)
+
+	// Initialize handlers
+	userHandler := handler.NewUserHandler(app.UserService)
 
 	// Public routes (no authentication required)
 	public := e.Group("/api/v1")
 	public.POST("/auth/signin", userHandler.SignIn)
+	public.POST("/auth/signup", userHandler.CreateUserAccount)
 
 	// Protected routes (authentication required)
 	admin := e.Group("/api/v1/admin", middleware.JWTMiddleware(cfg, sessionRepo))
@@ -141,6 +156,13 @@ func NewApp(cfg *config.Config) (*App, error) {
 	// Initialize Redis client
 	redisClient := cfg.RedisClient()
 
+	// Initialize RabbitMQ connection
+	rabbitMQChannel, err := cfg.ConnectionRabbitMQ()
+	if err != nil {
+		log.Printf("⚠️  RabbitMQ not available: %v", err)
+		log.Printf("💡 Email verification will not work until RabbitMQ is started")
+	}
+
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db.DB)
 	sessionRepo := repository.NewSessionRepository(redisClient, cfg)
@@ -148,11 +170,21 @@ func NewApp(cfg *config.Config) (*App, error) {
 	// Initialize utilities
 	jwtUtil := utils.NewJWTUtil(cfg)
 
+	// Initialize message publishers
+	var emailPublisher port.EmailInterface
+	if rabbitMQChannel != nil {
+		emailPublisher = message.NewEmailPublisher(rabbitMQChannel)
+	}
+
 	// Initialize services
-	userService := service.NewUserService(userRepo, sessionRepo, jwtUtil, cfg)
+	userService := service.NewUserService(userRepo, sessionRepo, jwtUtil, nil, emailPublisher, cfg)
 
 	return &App{
-		UserService: userService,
+		UserService:     userService,
+		UserRepo:        userRepo,
+		JWTUtil:         jwtUtil,
+		DB:              db.DB,
+		RabbitMQChannel: rabbitMQChannel,
 	}, nil
 }
 
