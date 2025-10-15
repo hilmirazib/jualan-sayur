@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
+	"time"
 	"user-service/config"
 	"user-service/internal/core/domain/entity"
 	"user-service/internal/core/port"
@@ -18,14 +20,18 @@ var (
 )
 
 type UserService struct {
-	userRepo port.UserRepositoryInterface
-	config   *config.Config
+	userRepo    port.UserRepositoryInterface
+	sessionRepo port.SessionInterface
+	jwtUtil     port.JWTInterface
+	config      *config.Config
 }
 
-func NewUserService(userRepo port.UserRepositoryInterface, cfg *config.Config) port.UserServiceInterface {
+func NewUserService(userRepo port.UserRepositoryInterface, sessionRepo port.SessionInterface, jwtUtil port.JWTInterface, cfg *config.Config) port.UserServiceInterface {
 	return &UserService{
-		userRepo: userRepo,
-		config:   cfg,
+		userRepo:    userRepo,
+		sessionRepo: sessionRepo,
+		jwtUtil:     jwtUtil,
+		config:      cfg,
 	}
 }
 
@@ -54,14 +60,24 @@ func (s *UserService) SignIn(ctx context.Context, req entity.UserEntity) (*entit
 		return nil, "", errors.New("incorrect password")
 	}
 
-	// Generate JWT token
-	token, err := utils.GenerateJWT(s.config, user.ID, user.Email, user.RoleName)
+	// Generate session ID
+	sessionID := "sess_" + fmt.Sprintf("%d", time.Now().UnixNano())
+
+	// Generate JWT token with session ID
+	token, err := s.jwtUtil.GenerateJWTWithSession(user.ID, user.Email, user.RoleName, sessionID)
 	if err != nil {
 		log.Error().Err(err).Int64("user_id", user.ID).Msg("[UserService-SignIn] Failed to generate JWT token")
 		return nil, "", errors.New("failed to generate token")
 	}
 
-	log.Info().Int64("user_id", user.ID).Str("email", req.Email).Msg("[UserService-SignIn] User signed in successfully")
+	// Store token in Redis session
+	err = s.sessionRepo.StoreToken(ctx, user.ID, sessionID, token)
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", user.ID).Msg("[UserService-SignIn] Failed to store token in session")
+		return nil, "", errors.New("failed to create session")
+	}
+
+	log.Info().Int64("user_id", user.ID).Str("email", req.Email).Str("session_id", sessionID).Msg("[UserService-SignIn] User signed in successfully")
 	return user, token, nil
 }
 

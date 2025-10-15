@@ -9,22 +9,29 @@ import (
 
 // JWTClaims represents the JWT claims structure
 type JWTClaims struct {
-	UserID   int64  `json:"user_id"`
-	Email    string `json:"email"`
-	RoleName string `json:"role_name"`
+	UserID    int64  `json:"user_id"`
+	Email     string `json:"email"`
+	RoleName  string `json:"role_name"`
+	SessionID string `json:"session_id"`
 	jwt.RegisteredClaims
 }
 
 // GenerateJWT generates a JWT token for the user
 func GenerateJWT(cfg *config.Config, userID int64, email, roleName string) (string, error) {
+	return GenerateJWTWithSession(cfg, userID, email, roleName, "")
+}
+
+// GenerateJWTWithSession generates a JWT token with session ID for the user
+func GenerateJWTWithSession(cfg *config.Config, userID int64, email, roleName, sessionID string) (string, error) {
 	// Token expiration time (24 hours)
 	expirationTime := time.Now().Add(24 * time.Hour)
 
 	// Create the JWT claims
 	claims := &JWTClaims{
-		UserID:   userID,
-		Email:    email,
-		RoleName: roleName,
+		UserID:    userID,
+		Email:     email,
+		RoleName:  roleName,
+		SessionID: sessionID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -67,4 +74,22 @@ func ValidateJWT(cfg *config.Config, tokenString string) (*JWTClaims, error) {
 	}
 
 	return nil, jwt.ErrInvalidKey
+}
+
+// JWTUtil implements JWTInterface
+type JWTUtil struct{}
+
+// GenerateJWT generates a JWT token for the user
+func (j *JWTUtil) GenerateJWT(userID int64, email, roleName string) (string, error) {
+	return GenerateJWT(nil, userID, email, roleName)
+}
+
+// GenerateJWTWithSession generates a JWT token with session ID for the user
+func (j *JWTUtil) GenerateJWTWithSession(userID int64, email, roleName, sessionID string) (string, error) {
+	return GenerateJWTWithSession(nil, userID, email, roleName, sessionID)
+}
+
+// ValidateJWT validates and parses a JWT token
+func (j *JWTUtil) ValidateJWT(tokenString string) (*JWTClaims, error) {
+	return ValidateJWT(nil, tokenString)
 }

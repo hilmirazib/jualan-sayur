@@ -15,6 +15,7 @@ import (
 	"user-service/internal/adapter/repository"
 	"user-service/internal/core/port"
 	"user-service/internal/core/service"
+	"user-service/utils"
 
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
@@ -134,11 +135,18 @@ func NewApp(cfg *config.Config) (*App, error) {
 		return nil, err
 	}
 
+	// Initialize Redis client
+	redisClient := cfg.RedisClient()
+
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db.DB)
+	sessionRepo := repository.NewSessionRepository(redisClient, cfg)
+
+	// Initialize utilities
+	jwtUtil := utils.JWTUtil{}
 
 	// Initialize services
-	userService := service.NewUserService(userRepo, cfg)
+	userService := service.NewUserService(userRepo, sessionRepo, &jwtUtil, cfg)
 
 	return &App{
 		UserService: userService,

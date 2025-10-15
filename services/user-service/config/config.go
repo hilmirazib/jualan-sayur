@@ -21,8 +21,9 @@ type PsqlDB struct {
 }
 
 type Config struct {
-	App    App    `json:"app"`
-	PsqlDB PsqlDB `json:"psql_db"`
+	App    App        `json:"app"`
+	PsqlDB PsqlDB     `json:"psql_db"`
+	Redis  RedisConfig `json:"redis"`
 }
 
 func NewConfig() *Config {
@@ -47,6 +48,12 @@ func NewConfig() *Config {
 			DBName:    viper.GetString("DATABASE_NAME"),
 			DBMaxOpen: viper.GetInt("DATABASE_MAX_OPEN_CONNECTION"),
 			DBMaxIdle: viper.GetInt("DATABASE_MAX_IDLE_CONNECTION"),
+		},
+		Redis: RedisConfig{
+			Host:     viper.GetString("REDIS_HOST"),
+			Port:     viper.GetString("REDIS_PORT"),
+			Password: viper.GetString("REDIS_PASSWORD"),
+			DB:       viper.GetInt("REDIS_DB"),
 		},
 	}
 }
