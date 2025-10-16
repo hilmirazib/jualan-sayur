@@ -264,6 +264,78 @@ Ketika Anda klik file `sayur-api.exe` langsung dari File Explorer:
 }
 ```
 
+### Forgot Password
+
+**Endpoint:** `POST /api/v1/auth/forgot-password`
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Success Response (200):**
+```json
+{
+  "message": "If your email is registered, you will receive a password reset link.",
+  "data": null
+}
+```
+
+**Error Responses:**
+
+**400 Bad Request - Invalid Email:**
+```json
+{
+  "message": "Invalid email format"
+}
+```
+
+### Reset Password
+
+**Endpoint:** `POST /api/v1/auth/reset-password`
+
+**Request Body:**
+```json
+{
+  "token": "reset-token-from-email",
+  "password": "newpassword123",
+  "password_confirmation": "newpassword123"
+}
+```
+
+**Success Response (200):**
+```json
+{
+  "message": "Password reset successfully",
+  "data": null
+}
+```
+
+**Error Responses:**
+
+**400 Bad Request - Invalid Token:**
+```json
+{
+  "message": "Invalid or expired reset token"
+}
+```
+
+**400 Bad Request - Password Validation:**
+```json
+{
+  "message": "Password confirmation does not match"
+}
+```
+
+**400 Bad Request - Password Too Short:**
+```json
+{
+  "message": "Password must be at least 8 characters long"
+}
+```
+
 ### Sign In
 
 **Endpoint:** `POST /api/v1/auth/signin`
