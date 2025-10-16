@@ -198,6 +198,70 @@ func (s *UserService) VerifyUserAccount(ctx context.Context, token string) error
 	return nil
 }
 
+// ForgotPassword implements port.UserServiceInterface.
+func (s *UserService) ForgotPassword(ctx context.Context, email string) error {
+	// Input validation
+	if err := s.validateEmail(email); err != nil {
+		log.Error().Err(err).Str("email", email).Msg("[UserService-ForgotPassword] Invalid email format")
+		return err
+	}
+
+	// Normalize email
+	email = strings.ToLower(strings.TrimSpace(email))
+
+	// Check if user exists and is verified
+	user, err := s.userRepo.GetUserByEmail(ctx, email)
+	if err != nil {
+		if err.Error() == "record not found" {
+			log.Warn().Str("email", email).Msg("[UserService-ForgotPassword] User not found")
+			// Don't reveal if email exists or not for security
+			return nil
+		}
+		log.Error().Err(err).Str("email", email).Msg("[UserService-ForgotPassword] Failed to get user from repository")
+		return errors.New("failed to process request")
+	}
+
+	// Check if user is verified
+	if !user.IsVerified {
+		log.Warn().Str("email", email).Msg("[UserService-ForgotPassword] User account not verified")
+		// Don't reveal account status for security
+		return nil
+	}
+
+	// Generate reset token
+	token, err := s.generateVerificationToken()
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", user.ID).Msg("[UserService-ForgotPassword] Failed to generate reset token")
+		return errors.New("failed to generate reset token")
+	}
+
+	// Create verification token entity for password reset
+	resetToken := &entity.VerificationTokenEntity{
+		UserID:    user.ID,
+		Token:     token,
+		TokenType: "password_reset",
+		ExpiresAt: time.Now().Add(1 * time.Hour), // Reset token expires in 1 hour
+	}
+
+	// Save reset token
+	err = s.verificationTokenRepo.CreateVerificationToken(ctx, resetToken)
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", user.ID).Msg("[UserService-ForgotPassword] Failed to save reset token")
+		return errors.New("failed to create reset token")
+	}
+
+	// Send password reset email
+	err = s.emailPublisher.SendPasswordResetEmail(ctx, email, token)
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", user.ID).Str("email", email).Msg("[UserService-ForgotPassword] Failed to send password reset email")
+		// Don't return error here, token is created but email failed
+		log.Warn().Int64("user_id", user.ID).Msg("[UserService-ForgotPassword] Reset token created but email sending failed")
+	}
+
+	log.Info().Int64("user_id", user.ID).Str("email", email).Msg("[UserService-ForgotPassword] Password reset request processed successfully")
+	return nil
+}
+
 // validateEmail performs basic email validation
 func (s *UserService) validateEmail(email string) error {
 	if email == "" {

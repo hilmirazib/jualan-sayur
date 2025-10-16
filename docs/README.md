@@ -9,11 +9,13 @@ MICRO-SAYUR adalah platform microservices untuk sistem jual beli sayuran yang di
 - Manajemen pengguna dan autentikasi
 - Port: 8080
 - Teknologi: Go, PostgreSQL, Redis, RabbitMQ
+- Features: Registration, Login, JWT Auth, Email Verification, Password Reset
 
 ### Notification Service
 - Pengiriman email notifikasi
 - Port: 8081
 - Teknologi: Go, RabbitMQ
+- Features: Email Templates, Async Processing, Multiple Email Types
 
 ### Product Service (Planned)
 - Manajemen produk sayuran

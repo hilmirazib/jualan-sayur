@@ -18,6 +18,7 @@ type UserHandlerInterface interface {
 	SignIn(ctx echo.Context) error
 	CreateUserAccount(ctx echo.Context) error
 	VerifyUserAccount(ctx echo.Context) error
+	ForgotPassword(ctx echo.Context) error
 	AdminCheck(ctx echo.Context) error
 }
 
@@ -294,6 +295,60 @@ func (u *UserHandler) VerifyUserAccount(c echo.Context) error {
 	resp.Data = nil
 
 	log.Info().Str("token", token).Msg("[UserHandler-VerifyUserAccount] User account verified successfully")
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+// ForgotPassword handles password reset request
+func (u *UserHandler) ForgotPassword(c echo.Context) error {
+	var (
+		req  = request.ForgotPasswordRequest{}
+		resp = response.DefaultResponse{}
+		ctx  = c.Request().Context()
+	)
+
+	// Bind request
+	if err := c.Bind(&req); err != nil {
+		log.Error().Err(err).Msg("[UserHandler-ForgotPassword] Failed to bind request")
+		resp.Message = "Invalid request format"
+		resp.Data = nil
+		return c.JSON(http.StatusBadRequest, resp)
+	}
+
+	// Validate request using go-playground/validator
+	if err := u.validator.Validate(&req); err != nil {
+		log.Error().Err(err).Msg("[UserHandler-ForgotPassword] Validation failed")
+		resp.Message = err.Error()
+		resp.Data = nil
+		return c.JSON(http.StatusBadRequest, resp)
+	}
+
+	// Call service
+	err := u.userService.ForgotPassword(ctx, req.Email)
+	if err != nil {
+		log.Error().Err(err).Str("email", req.Email).Msg("[UserHandler-ForgotPassword] Password reset request failed")
+
+		// Handle different error types
+		switch err.Error() {
+		case "invalid email format":
+			resp.Message = "Invalid email format"
+			resp.Data = nil
+			return c.JSON(http.StatusUnprocessableEntity, resp)
+		case "failed to process request", "failed to generate reset token", "failed to create reset token":
+			resp.Message = "Failed to process request"
+			resp.Data = nil
+			return c.JSON(http.StatusInternalServerError, resp)
+		default:
+			resp.Message = "Internal server error"
+			resp.Data = nil
+			return c.JSON(http.StatusInternalServerError, resp)
+		}
+	}
+
+	resp.Message = "If an account with this email exists, you will receive a password reset link."
+	resp.Data = nil
+
+	log.Info().Str("email", req.Email).Msg("[UserHandler-ForgotPassword] Password reset request processed successfully")
 
 	return c.JSON(http.StatusOK, resp)
 }

@@ -145,6 +145,11 @@ func (m *MockEmailPublisher) SendVerificationEmail(ctx context.Context, email, t
 	return args.Error(0)
 }
 
+func (m *MockEmailPublisher) SendPasswordResetEmail(ctx context.Context, email, token string) error {
+	args := m.Called(ctx, email, token)
+	return args.Error(0)
+}
+
 func TestUserService_SignIn_UserNotFound(t *testing.T) {
 	// Setup
 	mockRepo := new(MockUserRepository)

@@ -93,6 +93,7 @@ func RunServer() {
 	public.POST("/auth/signin", userHandler.SignIn)
 	public.POST("/auth/signup", userHandler.CreateUserAccount)
 	public.GET("/auth/verify", userHandler.VerifyUserAccount)
+	public.POST("/auth/forgot-password", userHandler.ForgotPassword)
 
 	// Protected routes (authentication required)
 	admin := e.Group("/api/v1/admin", middleware.JWTMiddleware(cfg, sessionRepo))

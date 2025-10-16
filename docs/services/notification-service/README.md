@@ -45,8 +45,8 @@ internal/
 - **Template**: `email_verification.html`
 
 ### Password Reset
-- **Trigger**: User meminta reset password
-- **Content**: Email dengan reset token
+- **Trigger**: User meminta forgot password
+- **Content**: Email dengan reset password link
 - **Template**: `password_reset.html`
 
 ### Order Confirmations (Future)
@@ -91,6 +91,20 @@ internal/
     "user_id": "uuid",
     "email": "user@example.com",
     "verification_token": "token",
+    "expires_at": "2025-10-16T14:55:39Z"
+  }
+}
+```
+
+#### Password Reset Event
+```json
+{
+  "event": "user.password_reset",
+  "timestamp": "2025-10-16T13:55:39Z",
+  "data": {
+    "user_id": "uuid",
+    "email": "user@example.com",
+    "reset_token": "token",
     "expires_at": "2025-10-16T14:55:39Z"
   }
 }
