@@ -45,7 +45,6 @@ func main() {
 	// Initialize consumer
 	emailConsumer := consumer.NewEmailConsumer(cfg, emailService, channel)
 
-	// Create context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

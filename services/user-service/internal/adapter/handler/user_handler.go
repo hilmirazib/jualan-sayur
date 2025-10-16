@@ -36,32 +36,27 @@ func (u *UserHandler) SignIn(c echo.Context) error {
 		ctx        = c.Request().Context()
 	)
 
-	// Bind request
 	if err := c.Bind(&req); err != nil {
 		log.Error().Err(err).Msg("[UserHandler-SignIn] Failed to bind request")
 		resp.Message = "Invalid request format"
 		return c.JSON(http.StatusBadRequest, resp)
 	}
 
-	// Validate request using go-playground/validator
 	if err := u.validator.Validate(&req); err != nil {
 		log.Error().Err(err).Msg("[UserHandler-SignIn] Validation failed")
 		resp.Message = err.Error()
 		return c.JSON(http.StatusBadRequest, resp)
 	}
 
-	// Convert request to entity
 	userEntity := entity.UserEntity{
 		Email:    req.Email,
 		Password: req.Password,
 	}
 
-	// Call service
 	user, token, err := u.userService.SignIn(ctx, userEntity)
 	if err != nil {
 		log.Error().Err(err).Str("email", req.Email).Msg("[UserHandler-SignIn] Sign in failed")
 
-		// Handle different error types
 		switch err.Error() {
 		case "user not found":
 			resp.Message = "User not found"
@@ -78,7 +73,6 @@ func (u *UserHandler) SignIn(c echo.Context) error {
 		}
 	}
 
-	// Build response
 	respSignIn.AccessToken = token
 	respSignIn.Role = user.RoleName
 	respSignIn.ID = user.ID
@@ -125,7 +119,6 @@ func (u *UserHandler) AdminCheck(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-// CreateUserAccount handles user account creation
 func (u *UserHandler) CreateUserAccount(c echo.Context) error {
 	var (
 		req         = request.CreateUserAccountRequest{}
@@ -134,19 +127,15 @@ func (u *UserHandler) CreateUserAccount(c echo.Context) error {
 		ctx         = c.Request().Context()
 	)
 
-	// Bind request
 	if err := c.Bind(&req); err != nil {
 		log.Error().Err(err).Msg("[UserHandler-CreateUserAccount] Failed to bind request")
 		resp.Message = "Invalid request format"
-		resp.Data = nil
 		return c.JSON(http.StatusBadRequest, resp)
 	}
 
-	// Validate request using go-playground/validator
 	if err := u.validator.Validate(&req); err != nil {
 		log.Error().Err(err).Msg("[UserHandler-CreateUserAccount] Validation failed")
 
-		// Handle specific validation errors with clear messages
 		if validationErrors, ok := err.(validator.ValidationErrors); ok {
 			for _, fieldError := range validationErrors {
 				fieldName := fieldError.Field()
@@ -156,96 +145,76 @@ func (u *UserHandler) CreateUserAccount(c echo.Context) error {
 				case "Email":
 					if tag == "email" {
 						resp.Message = "Invalid email format"
-						resp.Data = nil
 						return c.JSON(http.StatusUnprocessableEntity, resp)
 					}
 					if tag == "required" {
 						resp.Message = "Email is required"
-						resp.Data = nil
 						return c.JSON(http.StatusUnprocessableEntity, resp)
 					}
 				case "Name":
 					if tag == "required" {
 						resp.Message = "Name is required"
-						resp.Data = nil
 						return c.JSON(http.StatusUnprocessableEntity, resp)
 					}
 					if tag == "min" {
 						resp.Message = "Name must be at least 2 characters long"
-						resp.Data = nil
 						return c.JSON(http.StatusUnprocessableEntity, resp)
 					}
 					if tag == "max" {
 						resp.Message = "Name must not exceed 100 characters"
-						resp.Data = nil
 						return c.JSON(http.StatusUnprocessableEntity, resp)
 					}
 				case "Password":
 					if tag == "required" {
 						resp.Message = "Password is required"
-						resp.Data = nil
 						return c.JSON(http.StatusUnprocessableEntity, resp)
 					}
 					if tag == "min" {
 						resp.Message = "Password must be at least 8 characters long"
-						resp.Data = nil
 						return c.JSON(http.StatusUnprocessableEntity, resp)
 					}
 				case "PasswordConfirmation":
 					if tag == "required" {
 						resp.Message = "Password confirmation is required"
-						resp.Data = nil
 						return c.JSON(http.StatusUnprocessableEntity, resp)
 					}
 					if tag == "eqfield" {
 						resp.Message = "Password confirmation does not match"
-						resp.Data = nil
 						return c.JSON(http.StatusUnprocessableEntity, resp)
 					}
 				}
 			}
 		}
 
-		// Fallback for other validation errors
 		resp.Message = "Validation failed"
-		resp.Data = nil
 		return c.JSON(http.StatusUnprocessableEntity, resp)
 	}
 
-	// Call service
 	err := u.userService.CreateUserAccount(ctx, req.Email, req.Name, req.Password, req.PasswordConfirmation)
 	if err != nil {
 		log.Error().Err(err).Str("email", req.Email).Msg("[UserHandler-CreateUserAccount] Account creation failed")
 
-		// Handle different error types
 		switch err.Error() {
 		case "invalid email format":
 			resp.Message = "Invalid email format"
-			resp.Data = nil
 			return c.JSON(http.StatusUnprocessableEntity, resp)
 		case "password is required", "password must be at least 8 characters long", "password confirmation does not match":
 			resp.Message = err.Error()
-			resp.Data = nil
 			return c.JSON(http.StatusUnprocessableEntity, resp)
 		case "email already exists":
 			resp.Message = "Email already exists"
-			resp.Data = nil
 			return c.JSON(http.StatusConflict, resp)
 		case "failed to create account", "failed to generate verification token", "failed to create verification token":
 			resp.Message = "Failed to create account"
-			resp.Data = nil
 			return c.JSON(http.StatusInternalServerError, resp)
 		default:
 			resp.Message = "Internal server error"
-			resp.Data = nil
 			return c.JSON(http.StatusInternalServerError, resp)
 		}
 	}
 
-	// Build response
 	respCreate.Name = req.Name
 	respCreate.Email = req.Email
-
 	resp.Message = "Account created successfully. Please check your email for verification."
 	resp.Data = respCreate
 
@@ -254,53 +223,42 @@ func (u *UserHandler) CreateUserAccount(c echo.Context) error {
 	return c.JSON(http.StatusCreated, resp)
 }
 
-// VerifyUserAccount handles email verification
 func (u *UserHandler) VerifyUserAccount(c echo.Context) error {
 	var (
 		resp = response.DefaultResponse{}
 		ctx  = c.Request().Context()
 	)
 
-	// Get token from query parameter
 	token := c.QueryParam("token")
 	if token == "" {
 		log.Warn().Msg("[UserHandler-VerifyUserAccount] Missing verification token")
 		resp.Message = "Verification token is required"
-		resp.Data = nil
 		return c.JSON(http.StatusBadRequest, resp)
 	}
 
-	// Call service
 	err := u.userService.VerifyUserAccount(ctx, token)
 	if err != nil {
 		log.Error().Err(err).Str("token", token).Msg("[UserHandler-VerifyUserAccount] Account verification failed")
 
-		// Handle different error types
 		switch err.Error() {
 		case "invalid or expired verification token":
 			resp.Message = "Invalid or expired verification token"
-			resp.Data = nil
 			return c.JSON(http.StatusBadRequest, resp)
 		case "failed to verify token", "failed to verify account":
 			resp.Message = "Failed to verify account"
-			resp.Data = nil
 			return c.JSON(http.StatusInternalServerError, resp)
 		default:
 			resp.Message = "Internal server error"
-			resp.Data = nil
 			return c.JSON(http.StatusInternalServerError, resp)
 		}
 	}
 
 	resp.Message = "Account verified successfully. You can now sign in."
-	resp.Data = nil
-
 	log.Info().Str("token", token).Msg("[UserHandler-VerifyUserAccount] User account verified successfully")
 
 	return c.JSON(http.StatusOK, resp)
 }
 
-// ForgotPassword handles password reset request
 func (u *UserHandler) ForgotPassword(c echo.Context) error {
 	var (
 		req  = request.ForgotPasswordRequest{}
@@ -308,53 +266,41 @@ func (u *UserHandler) ForgotPassword(c echo.Context) error {
 		ctx  = c.Request().Context()
 	)
 
-	// Bind request
 	if err := c.Bind(&req); err != nil {
 		log.Error().Err(err).Msg("[UserHandler-ForgotPassword] Failed to bind request")
 		resp.Message = "Invalid request format"
-		resp.Data = nil
 		return c.JSON(http.StatusBadRequest, resp)
 	}
 
-	// Validate request using go-playground/validator
 	if err := u.validator.Validate(&req); err != nil {
 		log.Error().Err(err).Msg("[UserHandler-ForgotPassword] Validation failed")
 		resp.Message = err.Error()
-		resp.Data = nil
 		return c.JSON(http.StatusBadRequest, resp)
 	}
 
-	// Call service
 	err := u.userService.ForgotPassword(ctx, req.Email)
 	if err != nil {
 		log.Error().Err(err).Str("email", req.Email).Msg("[UserHandler-ForgotPassword] Password reset request failed")
 
-		// Handle different error types
 		switch err.Error() {
 		case "invalid email format":
 			resp.Message = "Invalid email format"
-			resp.Data = nil
 			return c.JSON(http.StatusUnprocessableEntity, resp)
 		case "failed to process request", "failed to generate reset token", "failed to create reset token":
 			resp.Message = "Failed to process request"
-			resp.Data = nil
 			return c.JSON(http.StatusInternalServerError, resp)
 		default:
 			resp.Message = "Internal server error"
-			resp.Data = nil
 			return c.JSON(http.StatusInternalServerError, resp)
 		}
 	}
 
 	resp.Message = "If an account with this email exists, you will receive a password reset link."
-	resp.Data = nil
-
 	log.Info().Str("email", req.Email).Msg("[UserHandler-ForgotPassword] Password reset request processed successfully")
 
 	return c.JSON(http.StatusOK, resp)
 }
 
-// ResetPassword handles password reset with token
 func (u *UserHandler) ResetPassword(c echo.Context) error {
 	var (
 		req  = request.ResetPasswordRequest{}
@@ -362,19 +308,15 @@ func (u *UserHandler) ResetPassword(c echo.Context) error {
 		ctx  = c.Request().Context()
 	)
 
-	// Bind request
 	if err := c.Bind(&req); err != nil {
 		log.Error().Err(err).Msg("[UserHandler-ResetPassword] Failed to bind request")
 		resp.Message = "Invalid request format"
-		resp.Data = nil
 		return c.JSON(http.StatusBadRequest, resp)
 	}
 
-	// Validate request using go-playground/validator
 	if err := u.validator.Validate(&req); err != nil {
 		log.Error().Err(err).Msg("[UserHandler-ResetPassword] Validation failed")
 
-		// Handle specific validation errors with clear messages
 		if validationErrors, ok := err.(validator.ValidationErrors); ok {
 			for _, fieldError := range validationErrors {
 				fieldName := fieldError.Field()
@@ -384,74 +326,58 @@ func (u *UserHandler) ResetPassword(c echo.Context) error {
 				case "Token":
 					if tag == "required" {
 						resp.Message = "Reset token is required"
-						resp.Data = nil
 						return c.JSON(http.StatusUnprocessableEntity, resp)
 					}
 				case "Password":
 					if tag == "required" {
 						resp.Message = "Password is required"
-						resp.Data = nil
 						return c.JSON(http.StatusUnprocessableEntity, resp)
 					}
 					if tag == "min" {
 						resp.Message = "Password must be at least 8 characters long"
-						resp.Data = nil
 						return c.JSON(http.StatusUnprocessableEntity, resp)
 					}
 				case "PasswordConfirmation":
 					if tag == "required" {
 						resp.Message = "Password confirmation is required"
-						resp.Data = nil
 						return c.JSON(http.StatusUnprocessableEntity, resp)
 					}
 					if tag == "eqfield" {
 						resp.Message = "Password confirmation does not match"
-						resp.Data = nil
 						return c.JSON(http.StatusUnprocessableEntity, resp)
 					}
 				}
 			}
 		}
 
-		// Fallback for other validation errors
 		resp.Message = "Validation failed"
-		resp.Data = nil
 		return c.JSON(http.StatusUnprocessableEntity, resp)
 	}
 
-	// Call service
 	err := u.userService.ResetPassword(ctx, req.Token, req.Password, req.PasswordConfirmation)
 	if err != nil {
 		log.Error().Err(err).Str("token", req.Token).Msg("[UserHandler-ResetPassword] Password reset failed")
 
-		// Handle different error types
 		switch err.Error() {
 		case "invalid or expired reset token":
 			resp.Message = "Invalid or expired reset token"
-			resp.Data = nil
 			return c.JSON(http.StatusBadRequest, resp)
 		case "invalid token type":
 			resp.Message = "Invalid token type"
-			resp.Data = nil
 			return c.JSON(http.StatusBadRequest, resp)
 		case "password is required", "password must be at least 8 characters long", "password confirmation does not match":
 			resp.Message = err.Error()
-			resp.Data = nil
 			return c.JSON(http.StatusUnprocessableEntity, resp)
 		case "failed to validate token", "failed to process password", "failed to update password":
 			resp.Message = "Failed to reset password"
-			resp.Data = nil
 			return c.JSON(http.StatusInternalServerError, resp)
 		default:
 			resp.Message = "Internal server error"
-			resp.Data = nil
 			return c.JSON(http.StatusInternalServerError, resp)
 		}
 	}
 
 	resp.Message = "Password reset successfully. You can now sign in with your new password."
-	resp.Data = nil
-
 	log.Info().Str("token", req.Token).Msg("[UserHandler-ResetPassword] Password reset successfully")
 
 	return c.JSON(http.StatusOK, resp)

@@ -12,7 +12,6 @@ MICRO-SAYUR menggunakan kombinasi synchronous dan asynchronous communication pat
 // User Service publishes event
 userService.Register(user) // → Publish "user.registered" event
 
-// Notification Service consumes event
 notificationService.SendWelcomeEmail(user)
 ```
 
@@ -24,7 +23,6 @@ notificationService.SendWelcomeEmail(user)
 
 #### Implementation
 ```go
-// HTTP Client in User Service
 type EmailPublisher interface {
     PublishUserRegistered(ctx context.Context, user *model.User) error
 }

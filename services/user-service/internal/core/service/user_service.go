@@ -41,15 +41,12 @@ func NewUserService(userRepo port.UserRepositoryInterface, sessionRepo port.Sess
 	}
 }
 
-// Signin implements port.UserServiceInterface.
 func (s *UserService) SignIn(ctx context.Context, req entity.UserEntity) (*entity.UserEntity, string, error) {
-	// Input validation
 	if err := s.validateEmail(req.Email); err != nil {
 		log.Error().Err(err).Str("email", req.Email).Msg("[UserService-SignIn] Invalid email format")
 		return nil, "", err
 	}
 
-	// Business logic: normalize email to lowercase
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 
 	user, err := s.userRepo.GetUserByEmail(ctx, req.Email)
@@ -66,17 +63,14 @@ func (s *UserService) SignIn(ctx context.Context, req entity.UserEntity) (*entit
 		return nil, "", errors.New("incorrect password")
 	}
 
-	// Generate session ID
 	sessionID := "sess_" + fmt.Sprintf("%d", time.Now().UnixNano())
 
-	// Generate JWT token with session ID
 	token, err := s.jwtUtil.GenerateJWTWithSession(user.ID, user.Email, user.RoleName, sessionID)
 	if err != nil {
 		log.Error().Err(err).Int64("user_id", user.ID).Msg("[UserService-SignIn] Failed to generate JWT token")
 		return nil, "", errors.New("failed to generate token")
 	}
 
-	// Store token in Redis session
 	err = s.sessionRepo.StoreToken(ctx, user.ID, sessionID, token)
 	if err != nil {
 		log.Error().Err(err).Int64("user_id", user.ID).Msg("[UserService-SignIn] Failed to store token in session")
@@ -87,9 +81,7 @@ func (s *UserService) SignIn(ctx context.Context, req entity.UserEntity) (*entit
 	return user, token, nil
 }
 
-// CreateUserAccount implements port.UserServiceInterface.
 func (s *UserService) CreateUserAccount(ctx context.Context, email, name, password, passwordConfirmation string) error {
-	// Input validation
 	if err := s.validateEmail(email); err != nil {
 		log.Error().Err(err).Str("email", email).Msg("[UserService-CreateUserAccount] Invalid email format")
 		return err
@@ -100,66 +92,56 @@ func (s *UserService) CreateUserAccount(ctx context.Context, email, name, passwo
 		return err
 	}
 
-	// Normalize email
 	email = strings.ToLower(strings.TrimSpace(email))
 	name = strings.TrimSpace(name)
 
-	// Check if email already exists (including unverified users)
 	existingUser, err := s.userRepo.GetUserByEmailIncludingUnverified(ctx, email)
 	if err == nil && existingUser != nil {
 		log.Warn().Str("email", email).Msg("[UserService-CreateUserAccount] Email already exists")
 		return errors.New("email already exists")
 	}
 
-	// Hash password
 	hashedPassword, err := utils.HashPassword(password)
 	if err != nil {
 		log.Error().Err(err).Str("email", email).Msg("[UserService-CreateUserAccount] Failed to hash password")
 		return errors.New("failed to process password")
 	}
 
-	// Create user entity
 	userEntity := &entity.UserEntity{
-		Name:     name,
-		Email:    email,
-		Password: hashedPassword,
-		IsVerified: false, // User is not verified initially
+		Name:       name,
+		Email:      email,
+		Password:   hashedPassword,
+		IsVerified: false,
 	}
 
-	// Create user in database
 	createdUser, err := s.userRepo.CreateUser(ctx, userEntity)
 	if err != nil {
 		log.Error().Err(err).Str("email", email).Msg("[UserService-CreateUserAccount] Failed to create user")
 		return errors.New("failed to create account")
 	}
 
-	// Generate verification token
 	token, err := s.generateVerificationToken()
 	if err != nil {
 		log.Error().Err(err).Int64("user_id", createdUser.ID).Msg("[UserService-CreateUserAccount] Failed to generate verification token")
 		return errors.New("failed to generate verification token")
 	}
 
-	// Create verification token entity
 	verificationToken := &entity.VerificationTokenEntity{
 		UserID:    createdUser.ID,
 		Token:     token,
 		TokenType: "email_verification",
-		ExpiresAt: time.Now().Add(24 * time.Hour), // Token expires in 24 hours
+		ExpiresAt: time.Now().Add(24 * time.Hour),
 	}
 
-	// Save verification token
 	err = s.verificationTokenRepo.CreateVerificationToken(ctx, verificationToken)
 	if err != nil {
 		log.Error().Err(err).Int64("user_id", createdUser.ID).Msg("[UserService-CreateUserAccount] Failed to save verification token")
 		return errors.New("failed to create verification token")
 	}
 
-	// Send verification email
 	err = s.emailPublisher.SendVerificationEmail(ctx, email, token)
 	if err != nil {
 		log.Error().Err(err).Int64("user_id", createdUser.ID).Str("email", email).Msg("[UserService-CreateUserAccount] Failed to send verification email")
-		// Don't return error here, account is created but email failed
 		log.Warn().Int64("user_id", createdUser.ID).Msg("[UserService-CreateUserAccount] Account created but email sending failed")
 	}
 
@@ -167,9 +149,7 @@ func (s *UserService) CreateUserAccount(ctx context.Context, email, name, passwo
 	return nil
 }
 
-// VerifyUserAccount implements port.UserServiceInterface.
 func (s *UserService) VerifyUserAccount(ctx context.Context, token string) error {
-	// Get verification token
 	verificationToken, err := s.verificationTokenRepo.GetVerificationToken(ctx, token)
 	if err != nil {
 		if err.Error() == "record not found" {
@@ -180,81 +160,66 @@ func (s *UserService) VerifyUserAccount(ctx context.Context, token string) error
 		return errors.New("failed to verify token")
 	}
 
-	// Update user verification status
 	err = s.userRepo.UpdateUserVerificationStatus(ctx, verificationToken.UserID, true)
 	if err != nil {
 		log.Error().Err(err).Int64("user_id", verificationToken.UserID).Msg("[UserService-VerifyUserAccount] Failed to update user verification status")
 		return errors.New("failed to verify account")
 	}
 
-	// Delete used verification token (one-time use)
 	err = s.verificationTokenRepo.DeleteVerificationToken(ctx, token)
 	if err != nil {
 		log.Error().Err(err).Str("token", token).Msg("[UserService-VerifyUserAccount] Failed to delete verification token")
-		// Don't return error here, account is already verified
 	}
 
 	log.Info().Int64("user_id", verificationToken.UserID).Str("token", token).Msg("[UserService-VerifyUserAccount] User account verified successfully")
 	return nil
 }
 
-// ForgotPassword implements port.UserServiceInterface.
 func (s *UserService) ForgotPassword(ctx context.Context, email string) error {
-	// Input validation
 	if err := s.validateEmail(email); err != nil {
 		log.Error().Err(err).Str("email", email).Msg("[UserService-ForgotPassword] Invalid email format")
 		return err
 	}
 
-	// Normalize email
 	email = strings.ToLower(strings.TrimSpace(email))
 
-	// Check if user exists and is verified
 	user, err := s.userRepo.GetUserByEmail(ctx, email)
 	if err != nil {
 		if err.Error() == "record not found" {
 			log.Warn().Str("email", email).Msg("[UserService-ForgotPassword] User not found")
-			// Don't reveal if email exists or not for security
 			return nil
 		}
 		log.Error().Err(err).Str("email", email).Msg("[UserService-ForgotPassword] Failed to get user from repository")
 		return errors.New("failed to process request")
 	}
 
-	// Check if user is verified
 	if !user.IsVerified {
 		log.Warn().Str("email", email).Msg("[UserService-ForgotPassword] User account not verified")
-		// Don't reveal account status for security
 		return nil
 	}
 
-	// Generate reset token
 	token, err := s.generateVerificationToken()
 	if err != nil {
 		log.Error().Err(err).Int64("user_id", user.ID).Msg("[UserService-ForgotPassword] Failed to generate reset token")
 		return errors.New("failed to generate reset token")
 	}
 
-	// Create verification token entity for password reset
 	resetToken := &entity.VerificationTokenEntity{
 		UserID:    user.ID,
 		Token:     token,
 		TokenType: "password_reset",
-		ExpiresAt: time.Now().Add(1 * time.Hour), // Reset token expires in 1 hour
+		ExpiresAt: time.Now().Add(1 * time.Hour),
 	}
 
-	// Save reset token
 	err = s.verificationTokenRepo.CreateVerificationToken(ctx, resetToken)
 	if err != nil {
 		log.Error().Err(err).Int64("user_id", user.ID).Msg("[UserService-ForgotPassword] Failed to save reset token")
 		return errors.New("failed to create reset token")
 	}
 
-	// Send password reset email
 	err = s.emailPublisher.SendPasswordResetEmail(ctx, email, token)
 	if err != nil {
 		log.Error().Err(err).Int64("user_id", user.ID).Str("email", email).Msg("[UserService-ForgotPassword] Failed to send password reset email")
-		// Don't return error here, token is created but email failed
 		log.Warn().Int64("user_id", user.ID).Msg("[UserService-ForgotPassword] Reset token created but email sending failed")
 	}
 
@@ -262,15 +227,12 @@ func (s *UserService) ForgotPassword(ctx context.Context, email string) error {
 	return nil
 }
 
-// ResetPassword implements port.UserServiceInterface.
 func (s *UserService) ResetPassword(ctx context.Context, token, newPassword, passwordConfirmation string) error {
-	// Validate password and confirmation
 	if err := s.validatePassword(newPassword, passwordConfirmation); err != nil {
 		log.Error().Err(err).Msg("[UserService-ResetPassword] Password validation failed")
 		return err
 	}
 
-	// Get and validate reset token
 	resetToken, err := s.verificationTokenRepo.GetVerificationToken(ctx, token)
 	if err != nil {
 		if err.Error() == "record not found" {
@@ -281,38 +243,32 @@ func (s *UserService) ResetPassword(ctx context.Context, token, newPassword, pas
 		return errors.New("failed to validate token")
 	}
 
-	// Check if token is for password reset
 	if resetToken.TokenType != "password_reset" {
 		log.Warn().Str("token", token).Str("token_type", resetToken.TokenType).Msg("[UserService-ResetPassword] Token is not for password reset")
 		return errors.New("invalid token type")
 	}
 
-	// Hash new password
 	hashedPassword, err := utils.HashPassword(newPassword)
 	if err != nil {
 		log.Error().Err(err).Int64("user_id", resetToken.UserID).Msg("[UserService-ResetPassword] Failed to hash new password")
 		return errors.New("failed to process password")
 	}
 
-	// Update user password
 	err = s.userRepo.UpdateUserPassword(ctx, resetToken.UserID, hashedPassword)
 	if err != nil {
 		log.Error().Err(err).Int64("user_id", resetToken.UserID).Msg("[UserService-ResetPassword] Failed to update user password")
 		return errors.New("failed to update password")
 	}
 
-	// Delete used reset token (one-time use)
 	err = s.verificationTokenRepo.DeleteVerificationToken(ctx, token)
 	if err != nil {
 		log.Error().Err(err).Str("token", token).Msg("[UserService-ResetPassword] Failed to delete reset token")
-		// Don't return error here, password is already updated
 	}
 
 	log.Info().Int64("user_id", resetToken.UserID).Str("token", token).Msg("[UserService-ResetPassword] Password reset successfully")
 	return nil
 }
 
-// validateEmail performs basic email validation
 func (s *UserService) validateEmail(email string) error {
 	if email == "" {
 		return ErrInvalidEmail
@@ -323,7 +279,6 @@ func (s *UserService) validateEmail(email string) error {
 		return ErrInvalidEmail
 	}
 
-	// Basic email format check
 	if !strings.Contains(email, "@") || !strings.Contains(email, ".") {
 		return ErrInvalidEmail
 	}
@@ -331,7 +286,6 @@ func (s *UserService) validateEmail(email string) error {
 	return nil
 }
 
-// validatePassword validates password and confirmation
 func (s *UserService) validatePassword(password, confirmation string) error {
 	if password == "" {
 		return errors.New("password is required")
@@ -348,7 +302,6 @@ func (s *UserService) validatePassword(password, confirmation string) error {
 	return nil
 }
 
-// generateVerificationToken generates a secure random token
 func (s *UserService) generateVerificationToken() (string, error) {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {

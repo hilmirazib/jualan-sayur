@@ -24,7 +24,6 @@ func main() {
 	log.Printf("Max Open: %d", cfg.PsqlDB.DBMaxOpen)
 	log.Printf("Max Idle: %d", cfg.PsqlDB.DBMaxIdle)
 
-	// Test database connection
 	log.Println("\n=== DATABASE CONNECTION TEST ===")
 	db, err := cfg.ConnectionPostgres()
 	if err != nil {
@@ -34,7 +33,6 @@ func main() {
 	log.Println("✅ Database connection successful!")
 	log.Printf("Database object: %v", db.DB)
 
-	// Test if we can ping the database
 	sqlDB, err := db.DB.DB()
 	if err != nil {
 		log.Fatalf("Failed to get underlying sql.DB: %v", err)

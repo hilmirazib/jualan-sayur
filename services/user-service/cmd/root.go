@@ -50,19 +50,17 @@ func init() {
 	rootCmd.AddCommand(configCmd)
 }
 
-// initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	if cfgFile != "" {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Find current directory.
 		viper.AddConfigPath(".")
 		viper.SetConfigName(".env")
 		viper.SetConfigType("env")
 	}
 
-	viper.AutomaticEnv() // read in environment variables that match
+	viper.AutomaticEnv() 
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {

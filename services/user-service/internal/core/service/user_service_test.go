@@ -54,6 +54,11 @@ func (m *MockUserRepository) GetUserByEmailIncludingUnverified(ctx context.Conte
 	return args.Get(0).(*entity.UserEntity), args.Error(1)
 }
 
+func (m *MockUserRepository) UpdateUserPassword(ctx context.Context, userID int64, hashedPassword string) error {
+	args := m.Called(ctx, userID, hashedPassword)
+	return args.Error(0)
+}
+
 // Mock session repository
 type MockSessionRepository struct {
 	mock.Mock
@@ -112,7 +117,6 @@ func (m *MockJWTUtil) ValidateJWT(tokenString string) (*utils.JWTClaims, error) 
 	return args.Get(0).(*utils.JWTClaims), args.Error(1)
 }
 
-// Mock verification token repository
 type MockVerificationTokenRepository struct {
 	mock.Mock
 }
@@ -158,7 +162,6 @@ func TestUserService_SignIn_UserNotFound(t *testing.T) {
 	ctx := context.Background()
 	email := "notfound@example.com"
 
-	// Mock expectations - return nil user and error
 	mockRepo.On("GetUserByEmail", ctx, email).Return(nil, errors.New("record not found"))
 
 	// Execute
@@ -236,7 +239,6 @@ func TestUserService_CreateUserAccount_EmailAlreadyExists(t *testing.T) {
 	ctx := context.Background()
 	email := "existing@example.com"
 
-	// Mock expectations - existing user found
 	existingUser := &entity.UserEntity{ID: 1, Email: email}
 	mockUserRepo.On("GetUserByEmailIncludingUnverified", ctx, email).Return(existingUser, nil)
 
@@ -290,7 +292,6 @@ func TestUserService_AdminCheck_Success(t *testing.T) {
 	email := "admin@example.com"
 	password := "adminpass123"
 
-	// Hash the password for the mock admin user
 	hashedPassword, _ := utils.HashPassword(password)
 	adminUser := &entity.UserEntity{
 		ID:       1,

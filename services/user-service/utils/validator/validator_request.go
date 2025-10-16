@@ -25,12 +25,10 @@ func NewValidator() *Validator {
 
 	validate := validator.New()
 
-	// Register default English translations
 	if err := enTranslations.RegisterDefaultTranslations(validate, trans); err != nil {
 		log.Fatal().Err(err).Msg("[NewValidator] Failed to register translations")
 	}
 
-	// Add custom validation messages
 	validate.RegisterTranslation("required", trans, func(ut ut.Translator) error {
 		return ut.Add("required", "{0} is required", true)
 	}, func(ut ut.Translator, fe validator.FieldError) string {
@@ -77,20 +75,17 @@ func (v *Validator) Validate(i interface{}) error {
 				errorMessages = append(errorMessages, translatedMsg)
 			}
 
-			// Return the first error message
 			if len(errorMessages) > 0 {
 				return errors.New(errorMessages[0])
 			}
 		}
 
-		// Fallback for non-validation errors
 		return err
 	}
 
 	return nil
 }
 
-// ValidateAndGetErrors returns all validation errors as a slice
 func (v *Validator) ValidateAndGetErrors(i interface{}) []string {
 	err := v.Validator.Struct(i)
 

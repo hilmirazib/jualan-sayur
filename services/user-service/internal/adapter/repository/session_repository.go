@@ -26,11 +26,9 @@ func NewSessionRepository(redisClient *redis.Client, cfg *config.Config) port.Se
 	}
 }
 
-// StoreToken stores JWT token in Redis with expiration
 func (s *SessionRepository) StoreToken(ctx context.Context, userID int64, sessionID string, token string) error {
 	key := s.getSessionKey(userID, sessionID)
 
-	// Store token with 24 hour expiration (same as JWT)
 	err := s.redisClient.Set(ctx, key, token, 24*time.Hour).Err()
 	if err != nil {
 		log.Error().Err(err).Int64("user_id", userID).Str("session_id", sessionID).Msg("[SessionRepository-StoreToken] Failed to store token")

@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-// configCmd represents the config command
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Show current configuration",

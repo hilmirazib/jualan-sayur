@@ -9,10 +9,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// CORSMiddleware creates CORS middleware
 func CORSMiddleware() echo.MiddlewareFunc {
 	return middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{"*"}, // In production, specify allowed origins
+		AllowOrigins: []string{"*"}, 
 		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions},
 		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
 		MaxAge:       86400, // 24 hours

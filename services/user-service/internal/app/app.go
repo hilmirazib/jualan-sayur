@@ -63,7 +63,6 @@ func RunServer() {
 		log.Printf("⚠️  Database not available, starting server in offline mode: %v", err)
 		log.Printf("🚀 Server will start but API endpoints will return database errors")
 		log.Printf("💡 To fix: Start PostgreSQL and run migrations")
-		// Continue with nil app - handlers will handle nil gracefully
 	}
 
 	// Initialize Echo server
@@ -82,13 +81,11 @@ func RunServer() {
 	// Initialize message publishers
 	emailPublisher := message.NewEmailPublisher(app.RabbitMQChannel)
 
-	// Initialize services with new dependencies
 	app.UserService = service.NewUserService(app.UserRepo, sessionRepo, app.JWTUtil, verificationTokenRepo, emailPublisher, cfg)
 
 	// Initialize handlers
 	userHandler := handler.NewUserHandler(app.UserService)
 
-	// Public routes (no authentication required)
 	public := e.Group("/api/v1")
 	public.POST("/auth/signin", userHandler.SignIn)
 	public.POST("/auth/signup", userHandler.CreateUserAccount)
@@ -96,7 +93,6 @@ func RunServer() {
 	public.POST("/auth/forgot-password", userHandler.ForgotPassword)
 	public.POST("/auth/reset-password", userHandler.ResetPassword)
 
-	// Protected routes (authentication required)
 	admin := e.Group("/api/v1/admin", middleware.JWTMiddleware(cfg, sessionRepo))
 	admin.GET("/check", userHandler.AdminCheck)
 
@@ -129,14 +125,12 @@ func RunServer() {
 		}
 	}()
 
-	// Wait for interrupt signal to gracefully shutdown the server
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 
 	<-quit
 	log.Println("Shutting down server...")
 
-	// Give outstanding requests 5 seconds to complete
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -147,7 +141,6 @@ func RunServer() {
 	log.Println("Server exiting")
 }
 
-// NewApp initializes the application with all dependencies
 func NewApp(cfg *config.Config) (*App, error) {
 	// Initialize database connection
 	db, err := cfg.ConnectionPostgres()
@@ -193,9 +186,6 @@ func NewApp(cfg *config.Config) (*App, error) {
 
 // Example usage function
 func (a *App) ExampleUsage() {
-	// This is just an example of how to use the service
-	// In a real application, this would be called from handlers
-
 	// ctx := context.Background()
 	// user, err := a.UserService.GetUserByEmail(ctx, "user@example.com")
 	// if err != nil {
