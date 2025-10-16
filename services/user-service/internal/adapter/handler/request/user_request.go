@@ -15,3 +15,9 @@ type CreateUserAccountRequest struct {
 type ForgotPasswordRequest struct {
 	Email string `json:"email" validate:"email,required"`
 }
+
+type ResetPasswordRequest struct {
+	Token                string `json:"token" validate:"required"`
+	Password             string `json:"password" validate:"required,min=8"`
+	PasswordConfirmation string `json:"password_confirmation" validate:"required,eqfield=Password"`
+}

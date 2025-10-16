@@ -46,8 +46,7 @@ POST   /api/v1/auth/login             # User login
 POST   /api/v1/auth/logout            # User logout
 POST   /api/v1/auth/refresh           # Refresh JWT token
 POST   /api/v1/auth/forgot-password   # Request password reset
-GET    /api/v1/auth/reset-password    # Verify reset token (future)
-POST   /api/v1/auth/reset-password    # Reset password (future)
+POST   /api/v1/auth/reset-password    # Reset password with token
 ```
 
 ### User Management

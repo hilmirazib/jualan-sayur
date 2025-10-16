@@ -19,6 +19,7 @@ type UserHandlerInterface interface {
 	CreateUserAccount(ctx echo.Context) error
 	VerifyUserAccount(ctx echo.Context) error
 	ForgotPassword(ctx echo.Context) error
+	ResetPassword(ctx echo.Context) error
 	AdminCheck(ctx echo.Context) error
 }
 
@@ -349,6 +350,109 @@ func (u *UserHandler) ForgotPassword(c echo.Context) error {
 	resp.Data = nil
 
 	log.Info().Str("email", req.Email).Msg("[UserHandler-ForgotPassword] Password reset request processed successfully")
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+// ResetPassword handles password reset with token
+func (u *UserHandler) ResetPassword(c echo.Context) error {
+	var (
+		req  = request.ResetPasswordRequest{}
+		resp = response.DefaultResponse{}
+		ctx  = c.Request().Context()
+	)
+
+	// Bind request
+	if err := c.Bind(&req); err != nil {
+		log.Error().Err(err).Msg("[UserHandler-ResetPassword] Failed to bind request")
+		resp.Message = "Invalid request format"
+		resp.Data = nil
+		return c.JSON(http.StatusBadRequest, resp)
+	}
+
+	// Validate request using go-playground/validator
+	if err := u.validator.Validate(&req); err != nil {
+		log.Error().Err(err).Msg("[UserHandler-ResetPassword] Validation failed")
+
+		// Handle specific validation errors with clear messages
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			for _, fieldError := range validationErrors {
+				fieldName := fieldError.Field()
+				tag := fieldError.Tag()
+
+				switch fieldName {
+				case "Token":
+					if tag == "required" {
+						resp.Message = "Reset token is required"
+						resp.Data = nil
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+				case "Password":
+					if tag == "required" {
+						resp.Message = "Password is required"
+						resp.Data = nil
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+					if tag == "min" {
+						resp.Message = "Password must be at least 8 characters long"
+						resp.Data = nil
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+				case "PasswordConfirmation":
+					if tag == "required" {
+						resp.Message = "Password confirmation is required"
+						resp.Data = nil
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+					if tag == "eqfield" {
+						resp.Message = "Password confirmation does not match"
+						resp.Data = nil
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+				}
+			}
+		}
+
+		// Fallback for other validation errors
+		resp.Message = "Validation failed"
+		resp.Data = nil
+		return c.JSON(http.StatusUnprocessableEntity, resp)
+	}
+
+	// Call service
+	err := u.userService.ResetPassword(ctx, req.Token, req.Password, req.PasswordConfirmation)
+	if err != nil {
+		log.Error().Err(err).Str("token", req.Token).Msg("[UserHandler-ResetPassword] Password reset failed")
+
+		// Handle different error types
+		switch err.Error() {
+		case "invalid or expired reset token":
+			resp.Message = "Invalid or expired reset token"
+			resp.Data = nil
+			return c.JSON(http.StatusBadRequest, resp)
+		case "invalid token type":
+			resp.Message = "Invalid token type"
+			resp.Data = nil
+			return c.JSON(http.StatusBadRequest, resp)
+		case "password is required", "password must be at least 8 characters long", "password confirmation does not match":
+			resp.Message = err.Error()
+			resp.Data = nil
+			return c.JSON(http.StatusUnprocessableEntity, resp)
+		case "failed to validate token", "failed to process password", "failed to update password":
+			resp.Message = "Failed to reset password"
+			resp.Data = nil
+			return c.JSON(http.StatusInternalServerError, resp)
+		default:
+			resp.Message = "Internal server error"
+			resp.Data = nil
+			return c.JSON(http.StatusInternalServerError, resp)
+		}
+	}
+
+	resp.Message = "Password reset successfully. You can now sign in with your new password."
+	resp.Data = nil
+
+	log.Info().Str("token", req.Token).Msg("[UserHandler-ResetPassword] Password reset successfully")
 
 	return c.JSON(http.StatusOK, resp)
 }

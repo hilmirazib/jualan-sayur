@@ -262,6 +262,56 @@ func (s *UserService) ForgotPassword(ctx context.Context, email string) error {
 	return nil
 }
 
+// ResetPassword implements port.UserServiceInterface.
+func (s *UserService) ResetPassword(ctx context.Context, token, newPassword, passwordConfirmation string) error {
+	// Validate password and confirmation
+	if err := s.validatePassword(newPassword, passwordConfirmation); err != nil {
+		log.Error().Err(err).Msg("[UserService-ResetPassword] Password validation failed")
+		return err
+	}
+
+	// Get and validate reset token
+	resetToken, err := s.verificationTokenRepo.GetVerificationToken(ctx, token)
+	if err != nil {
+		if err.Error() == "record not found" {
+			log.Warn().Str("token", token).Msg("[UserService-ResetPassword] Reset token not found or expired")
+			return errors.New("invalid or expired reset token")
+		}
+		log.Error().Err(err).Str("token", token).Msg("[UserService-ResetPassword] Failed to get reset token")
+		return errors.New("failed to validate token")
+	}
+
+	// Check if token is for password reset
+	if resetToken.TokenType != "password_reset" {
+		log.Warn().Str("token", token).Str("token_type", resetToken.TokenType).Msg("[UserService-ResetPassword] Token is not for password reset")
+		return errors.New("invalid token type")
+	}
+
+	// Hash new password
+	hashedPassword, err := utils.HashPassword(newPassword)
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", resetToken.UserID).Msg("[UserService-ResetPassword] Failed to hash new password")
+		return errors.New("failed to process password")
+	}
+
+	// Update user password
+	err = s.userRepo.UpdateUserPassword(ctx, resetToken.UserID, hashedPassword)
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", resetToken.UserID).Msg("[UserService-ResetPassword] Failed to update user password")
+		return errors.New("failed to update password")
+	}
+
+	// Delete used reset token (one-time use)
+	err = s.verificationTokenRepo.DeleteVerificationToken(ctx, token)
+	if err != nil {
+		log.Error().Err(err).Str("token", token).Msg("[UserService-ResetPassword] Failed to delete reset token")
+		// Don't return error here, password is already updated
+	}
+
+	log.Info().Int64("user_id", resetToken.UserID).Str("token", token).Msg("[UserService-ResetPassword] Password reset successfully")
+	return nil
+}
+
 // validateEmail performs basic email validation
 func (s *UserService) validateEmail(email string) error {
 	if email == "" {

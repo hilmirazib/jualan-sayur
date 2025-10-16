@@ -159,6 +159,16 @@ func (u *UserRepository) GetUserByEmailIncludingUnverified(ctx context.Context, 
 	}, nil
 }
 
+func (u *UserRepository) UpdateUserPassword(ctx context.Context, userID int64, hashedPassword string) error {
+	if err := u.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", userID).Update("password", hashedPassword).Error; err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Msg("[UserRepository-UpdateUserPassword] Failed to update user password")
+		return err
+	}
+
+	log.Info().Int64("user_id", userID).Msg("[UserRepository-UpdateUserPassword] User password updated successfully")
+	return nil
+}
+
 func NewUserRepository(db *gorm.DB) port.UserRepositoryInterface {
 	return &UserRepository{db: db}
 }

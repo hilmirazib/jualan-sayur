@@ -10,4 +10,5 @@ type UserServiceInterface interface {
 	CreateUserAccount(ctx context.Context, email, name, password, passwordConfirmation string) error
 	VerifyUserAccount(ctx context.Context, token string) error
 	ForgotPassword(ctx context.Context, email string) error
+	ResetPassword(ctx context.Context, token, newPassword, passwordConfirmation string) error
 }
