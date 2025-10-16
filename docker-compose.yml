@@ -70,6 +70,26 @@ services:
     networks:
       - sayur-network
 
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    container_name: sayur-notification-service
+    env_file:
+      - ./services/notification-service/.env
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=sayur_user
+      - RABBITMQ_PASSWORD=sayur_password
+      # - SMTP_HOST=
+      # - SMTP_PORT=
+      # - SMTP_USER=
+      # - SMTP_PASSWORD=
+    depends_on:
+      - rabbitmq
+    networks:
+      - sayur-network
+
 volumes:
   postgres_data:
   redis_data:
