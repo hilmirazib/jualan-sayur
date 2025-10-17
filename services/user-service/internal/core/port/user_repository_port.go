@@ -13,4 +13,5 @@ type UserRepositoryInterface interface {
 	GetRoleByName(ctx context.Context, name string) (*entity.RoleEntity, error)
 	UpdateUserVerificationStatus(ctx context.Context, userID int64, isVerified bool) error
 	UpdateUserPassword(ctx context.Context, userID int64, hashedPassword string) error
+	UpdateUserPhoto(ctx context.Context, userID int64, photoURL string) error
 }

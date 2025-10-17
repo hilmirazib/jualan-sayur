@@ -14,6 +14,7 @@ import (
 	"user-service/internal/adapter/message"
 	"user-service/internal/adapter/middleware"
 	"user-service/internal/adapter/repository"
+	"user-service/internal/adapter/storage"
 	"user-service/internal/core/port"
 	"user-service/internal/core/service"
 	"user-service/utils"
@@ -82,7 +83,19 @@ func RunServer() {
 	// Initialize message publishers
 	emailPublisher := message.NewEmailPublisher(app.RabbitMQChannel)
 
-	app.UserService = service.NewUserService(app.UserRepo, sessionRepo, app.JWTUtil, verificationTokenRepo, emailPublisher, blacklistTokenRepo, cfg)
+	// Initialize storage (Google Cloud Storage)
+	gcsStorage, err := storage.NewGCSStorage(
+		cfg.GoogleCloud.ProjectID,
+		cfg.GoogleCloud.BucketName,
+		cfg.GoogleCloud.CredentialsFile,
+	)
+	if err != nil {
+		log.Printf("⚠️  Google Cloud Storage not available: %v", err)
+		log.Printf("💡 Image upload will not work until GCS is configured")
+		gcsStorage = nil
+	}
+
+	app.UserService = service.NewUserService(app.UserRepo, sessionRepo, app.JWTUtil, verificationTokenRepo, emailPublisher, blacklistTokenRepo, gcsStorage, cfg)
 
 	// Initialize handlers
 	userHandler := handler.NewUserHandler(app.UserService)
@@ -95,6 +108,7 @@ func RunServer() {
 	public.POST("/auth/forgot-password", userHandler.ForgotPassword)
 	public.POST("/auth/reset-password", userHandler.ResetPassword)
 	public.GET("/auth/profile", userHandler.Profile, middleware.JWTMiddleware(cfg, sessionRepo, blacklistTokenRepo))
+	public.POST("/auth/profile/image-upload", userHandler.ImageUploadProfile, middleware.JWTMiddleware(cfg, sessionRepo, blacklistTokenRepo))
 
 	admin := e.Group("/api/v1/admin", middleware.JWTMiddleware(cfg, sessionRepo, blacklistTokenRepo))
 	admin.GET("/check", userHandler.AdminCheck)
@@ -176,8 +190,20 @@ func NewApp(cfg *config.Config) (*App, error) {
 		emailPublisher = message.NewEmailPublisher(rabbitMQChannel)
 	}
 
+	// Initialize storage (Google Cloud Storage)
+	gcsStorage, err := storage.NewGCSStorage(
+		cfg.GoogleCloud.ProjectID,
+		cfg.GoogleCloud.BucketName,
+		cfg.GoogleCloud.CredentialsFile,
+	)
+	if err != nil {
+		log.Printf("⚠️  Google Cloud Storage not available: %v", err)
+		log.Printf("💡 Image upload will not work until GCS is configured")
+		gcsStorage = nil
+	}
+
 	// Initialize services
-	userService := service.NewUserService(userRepo, sessionRepo, jwtUtil, nil, emailPublisher, blacklistTokenRepo, cfg)
+	userService := service.NewUserService(userRepo, sessionRepo, jwtUtil, nil, emailPublisher, blacklistTokenRepo, gcsStorage, cfg)
 
 	return &App{
 		UserService:     userService,

@@ -20,11 +20,18 @@ type PsqlDB struct {
 	DBMaxIdle int    `json:"db_max_idle"`
 }
 
+type GoogleCloud struct {
+	ProjectID      string `json:"project_id"`
+	BucketName     string `json:"bucket_name"`
+	CredentialsFile string `json:"credentials_file"`
+}
+
 type Config struct {
-	App     App         `json:"app"`
-	PsqlDB  PsqlDB      `json:"psql_db"`
-	Redis   RedisConfig `json:"redis"`
-	RabbitMQ RabbitMQ   `json:"rabbitmq"`
+	App         App         `json:"app"`
+	PsqlDB      PsqlDB      `json:"psql_db"`
+	Redis       RedisConfig `json:"redis"`
+	RabbitMQ    RabbitMQ    `json:"rabbitmq"`
+	GoogleCloud GoogleCloud `json:"google_cloud"`
 }
 
 func NewConfig() *Config {
@@ -62,6 +69,11 @@ func NewConfig() *Config {
 			User:     viper.GetString("RABBITMQ_USER"),
 			Password: viper.GetString("RABBITMQ_PASSWORD"),
 			VHost:    viper.GetString("RABBITMQ_VHOST"),
+		},
+		GoogleCloud: GoogleCloud{
+			ProjectID:      viper.GetString("GOOGLE_CLOUD_PROJECT_ID"),
+			BucketName:     viper.GetString("GOOGLE_CLOUD_BUCKET_NAME"),
+			CredentialsFile: viper.GetString("GOOGLE_CLOUD_CREDENTIALS_FILE"),
 		},
 	}
 }

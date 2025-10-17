@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 	"user-service/internal/core/domain/entity"
@@ -24,6 +25,7 @@ type AuthServiceInterface interface {
 	ResetPassword(ctx context.Context, token, newPassword, passwordConfirmation string) error
 	Logout(ctx context.Context, userID int64, sessionID, tokenString string, tokenExpiresAt int64) error
 	GetProfile(ctx context.Context, userID int64) (*entity.UserEntity, error)
+	UploadProfileImage(ctx context.Context, userID int64, file io.Reader, contentType, filename string) (string, error)
 }
 
 type AuthService struct {
@@ -33,9 +35,10 @@ type AuthService struct {
 	verificationTokenRepo port.VerificationTokenInterface
 	emailPublisher        port.EmailInterface
 	blacklistTokenRepo    port.BlacklistTokenInterface
+	storage               port.StorageInterface
 }
 
-func NewAuthService(userRepo port.UserRepositoryInterface, sessionRepo port.SessionInterface, jwtUtil port.JWTInterface, verificationTokenRepo port.VerificationTokenInterface, emailPublisher port.EmailInterface, blacklistTokenRepo port.BlacklistTokenInterface) AuthServiceInterface {
+func NewAuthService(userRepo port.UserRepositoryInterface, sessionRepo port.SessionInterface, jwtUtil port.JWTInterface, verificationTokenRepo port.VerificationTokenInterface, emailPublisher port.EmailInterface, blacklistTokenRepo port.BlacklistTokenInterface, storage port.StorageInterface) AuthServiceInterface {
 	return &AuthService{
 		userRepo:              userRepo,
 		sessionRepo:           sessionRepo,
@@ -43,6 +46,7 @@ func NewAuthService(userRepo port.UserRepositoryInterface, sessionRepo port.Sess
 		verificationTokenRepo: verificationTokenRepo,
 		emailPublisher:        emailPublisher,
 		blacklistTokenRepo:    blacklistTokenRepo,
+		storage:               storage,
 	}
 }
 
@@ -345,6 +349,29 @@ func (s *AuthService) GetProfile(ctx context.Context, userID int64) (*entity.Use
 
 	log.Info().Int64("user_id", userID).Msg("[AuthService-GetProfile] User profile retrieved successfully")
 	return user, nil
+}
+
+func (s *AuthService) UploadProfileImage(ctx context.Context, userID int64, file io.Reader, contentType, filename string) (string, error) {
+	// Upload file to storage
+	imageURL, err := s.storage.UploadFile(ctx, "", "", file, contentType)
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Msg("[AuthService-UploadProfileImage] Failed to upload image to storage")
+		return "", errors.New("failed to upload image")
+	}
+
+	// Update user photo URL in database
+	err = s.userRepo.UpdateUserPhoto(ctx, userID, imageURL)
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Str("image_url", imageURL).Msg("[AuthService-UploadProfileImage] Failed to update user photo in database")
+		// Try to delete uploaded file if database update fails
+		if deleteErr := s.storage.DeleteFile(ctx, "", imageURL); deleteErr != nil {
+			log.Error().Err(deleteErr).Str("image_url", imageURL).Msg("[AuthService-UploadProfileImage] Failed to delete uploaded file after database error")
+		}
+		return "", errors.New("failed to update profile")
+	}
+
+	log.Info().Int64("user_id", userID).Str("image_url", imageURL).Msg("[AuthService-UploadProfileImage] Profile image uploaded successfully")
+	return imageURL, nil
 }
 
 func (s *AuthService) generateVerificationToken() (string, error) {

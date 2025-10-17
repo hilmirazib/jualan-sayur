@@ -398,6 +398,88 @@ Content-Type: application/json
 }
 ```
 
+### Upload Profile Image
+
+**⚠️ STATUS: BELUM DI TEST**
+
+**PENTING**: Fitur upload profile image telah diimplementasikan namun **BELUM DI TEST**. Sebelum menggunakan fitur ini:
+
+1. Setup Google Cloud Storage project dan credentials
+2. Test endpoint dengan Postman/curl
+3. Verify file validation (size, type, extension)
+4. Check database updates dan GCS bucket
+
+**Endpoint:** `POST /api/v1/auth/profile/image-upload`
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+Content-Type: multipart/form-data
+```
+
+**Form Data:**
+- `photo`: File (required) - JPEG, PNG, GIF, WebP, max 5MB
+
+**Success Response (200):**
+```json
+{
+  "message": "Profile image uploaded successfully",
+  "data": {
+    "image_url": "https://storage.googleapis.com/bucket/profile-uuid.jpg"
+  }
+}
+```
+
+**Error Responses:**
+
+**400 Bad Request - Missing File:**
+```json
+{
+  "message": "Photo is required",
+  "data": null
+}
+```
+
+**401 Unauthorized - Invalid Token:**
+```json
+{
+  "message": "Invalid or expired token",
+  "data": null
+}
+```
+
+**422 Unprocessable Entity - File Too Large:**
+```json
+{
+  "message": "File size too large, maximum 5MB",
+  "data": null
+}
+```
+
+**422 Unprocessable Entity - Invalid File Type:**
+```json
+{
+  "message": "Invalid file type, only JPEG, PNG, GIF, and WebP are allowed",
+  "data": null
+}
+```
+
+**500 Internal Server Error - Upload Failed:**
+```json
+{
+  "message": "Failed to upload image to storage",
+  "data": null
+}
+```
+
+**500 Internal Server Error - Database Update Failed:**
+```json
+{
+  "message": "Failed to update profile",
+  "data": null
+}
+```
+
 ### Sign In
 
 **Endpoint:** `POST /api/v1/auth/signin`

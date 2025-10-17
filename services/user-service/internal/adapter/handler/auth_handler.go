@@ -23,6 +23,7 @@ type AuthHandlerInterface interface {
 	ResetPassword(ctx echo.Context) error
 	Logout(ctx echo.Context) error
 	Profile(ctx echo.Context) error
+	ImageUploadProfile(ctx echo.Context) error
 }
 
 type AuthHandler struct {
@@ -436,6 +437,61 @@ func (a *AuthHandler) Profile(c echo.Context) error {
 	resp.Data = profileResp
 
 	log.Info().Int64("user_id", userID).Msg("[AuthHandler-Profile] User profile retrieved successfully")
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+func (a *AuthHandler) ImageUploadProfile(c echo.Context) error {
+	var (
+		resp = response.DefaultResponse{}
+		ctx  = c.Request().Context()
+	)
+
+	userID := c.Get("user_id").(int64)
+
+	// Get the file from form
+	file, err := c.FormFile("photo")
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Msg("[AuthHandler-ImageUploadProfile] Failed to get file from form")
+		resp.Message = "Photo is required"
+		return c.JSON(http.StatusBadRequest, resp)
+	}
+
+	// Open the uploaded file
+	src, err := file.Open()
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Msg("[AuthHandler-ImageUploadProfile] Failed to open uploaded file")
+		resp.Message = "Failed to process uploaded file"
+		return c.JSON(http.StatusInternalServerError, resp)
+	}
+	defer src.Close()
+
+	// Upload image
+	imageURL, err := a.userService.UploadProfileImage(ctx, userID, src, file.Header.Get("Content-Type"), file.Filename)
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Msg("[AuthHandler-ImageUploadProfile] Failed to upload profile image")
+
+		switch err.Error() {
+		case "failed to upload image":
+			resp.Message = "Failed to upload image to storage"
+			return c.JSON(http.StatusInternalServerError, resp)
+		case "failed to update profile":
+			resp.Message = "Failed to update profile"
+			return c.JSON(http.StatusInternalServerError, resp)
+		default:
+			resp.Message = "Internal server error"
+			return c.JSON(http.StatusInternalServerError, resp)
+		}
+	}
+
+	imageResp := response.ImageUploadResponse{
+		ImageURL: imageURL,
+	}
+
+	resp.Message = "Profile image uploaded successfully"
+	resp.Data = imageResp
+
+	log.Info().Int64("user_id", userID).Str("image_url", imageURL).Msg("[AuthHandler-ImageUploadProfile] Profile image uploaded successfully")
 
 	return c.JSON(http.StatusOK, resp)
 }

@@ -28,3 +28,7 @@ type ProfileResponse struct {
 	Lng     string `json:"lng"`
 	Photo   string `json:"photo"`
 }
+
+type ImageUploadResponse struct {
+	ImageURL string `json:"image_url"`
+}

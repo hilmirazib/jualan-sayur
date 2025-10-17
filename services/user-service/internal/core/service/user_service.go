@@ -22,9 +22,9 @@ func (u *UserService) GetProfile(ctx context.Context, userID int64) (*entity.Use
 	return u.AuthServiceInterface.GetProfile(ctx, userID)
 }
 
-func NewUserService(userRepo port.UserRepositoryInterface, sessionRepo port.SessionInterface, jwtUtil port.JWTInterface, verificationTokenRepo port.VerificationTokenInterface, emailPublisher port.EmailInterface, blacklistTokenRepo port.BlacklistTokenInterface, cfg *config.Config) port.UserServiceInterface {
+func NewUserService(userRepo port.UserRepositoryInterface, sessionRepo port.SessionInterface, jwtUtil port.JWTInterface, verificationTokenRepo port.VerificationTokenInterface, emailPublisher port.EmailInterface, blacklistTokenRepo port.BlacklistTokenInterface, storage port.StorageInterface, cfg *config.Config) port.UserServiceInterface {
 	return &UserService{
-		AuthServiceInterface: NewAuthService(userRepo, sessionRepo, jwtUtil, verificationTokenRepo, emailPublisher, blacklistTokenRepo),
+		AuthServiceInterface: NewAuthService(userRepo, sessionRepo, jwtUtil, verificationTokenRepo, emailPublisher, blacklistTokenRepo, storage),
 		config:               cfg,
 	}
 }

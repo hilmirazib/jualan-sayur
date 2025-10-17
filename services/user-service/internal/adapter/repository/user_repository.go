@@ -202,6 +202,16 @@ func (u *UserRepository) UpdateUserPassword(ctx context.Context, userID int64, h
 	return nil
 }
 
+func (u *UserRepository) UpdateUserPhoto(ctx context.Context, userID int64, photoURL string) error {
+	if err := u.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", userID).Update("photo", photoURL).Error; err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Str("photo_url", photoURL).Msg("[UserRepository-UpdateUserPhoto] Failed to update user photo")
+		return err
+	}
+
+	log.Info().Int64("user_id", userID).Str("photo_url", photoURL).Msg("[UserRepository-UpdateUserPhoto] User photo updated successfully")
+	return nil
+}
+
 func NewUserRepository(db *gorm.DB) port.UserRepositoryInterface {
 	return &UserRepository{db: db}
 }
