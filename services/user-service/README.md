@@ -336,6 +336,68 @@ Ketika Anda klik file `sayur-api.exe` langsung dari File Explorer:
 }
 ```
 
+### Get Profile
+
+**Endpoint:** `GET /api/v1/auth/profile`
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+```
+
+**Success Response (200):**
+```json
+{
+  "message": "Profile retrieved successfully",
+  "data": {
+    "id": 1,
+    "email": "user@example.com",
+    "role": "Customer",
+    "name": "John Doe",
+    "phone": "+628123456789",
+    "address": "Jl. Example No. 123",
+    "lat": "-6.2088",
+    "lng": "106.8456",
+    "photo": "https://example.com/photo.jpg"
+  }
+}
+```
+
+**Error Responses:**
+
+**401 Unauthorized - Missing Token:**
+```json
+{
+  "message": "Authorization header required",
+  "data": null
+}
+```
+
+**401 Unauthorized - Invalid Token:**
+```json
+{
+  "message": "Invalid or expired token",
+  "data": null
+}
+```
+
+**404 Not Found - User Not Found:**
+```json
+{
+  "message": "User not found",
+  "data": null
+}
+```
+
+**500 Internal Server Error:**
+```json
+{
+  "message": "Internal server error",
+  "data": null
+}
+```
+
 ### Sign In
 
 **Endpoint:** `POST /api/v1/auth/signin`

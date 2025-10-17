@@ -12,4 +12,5 @@ type UserServiceInterface interface {
 	ForgotPassword(ctx context.Context, email string) error
 	ResetPassword(ctx context.Context, token, newPassword, passwordConfirmation string) error
 	Logout(ctx context.Context, userID int64, sessionID, tokenString string, tokenExpiresAt int64) error
+	GetProfile(ctx context.Context, userID int64) (*entity.UserEntity, error)
 }

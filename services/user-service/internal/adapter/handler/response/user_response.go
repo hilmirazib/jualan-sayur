@@ -16,3 +16,15 @@ type CreateUserAccountResponse struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
 }
+
+type ProfileResponse struct {
+	ID      int64  `json:"id"`
+	Email   string `json:"email"`
+	Role    string `json:"role"`
+	Name    string `json:"name"`
+	Phone   string `json:"phone"`
+	Address string `json:"address"`
+	Lat     string `json:"lat"`
+	Lng     string `json:"lng"`
+	Photo   string `json:"photo"`
+}

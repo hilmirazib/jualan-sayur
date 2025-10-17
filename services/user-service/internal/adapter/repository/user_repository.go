@@ -125,6 +125,39 @@ func (u *UserRepository) UpdateUserVerificationStatus(ctx context.Context, userI
 }
 
 // GetUserByEmailIncludingUnverified implements UserRepositoryInterface.
+func (u *UserRepository) GetUserByID(ctx context.Context, userID int64) (*entity.UserEntity, error) {
+	modelUser := model.User{}
+	if err := u.db.Where("id = ? AND is_verified = ?", userID, true).Preload("Roles").First(&modelUser).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			log.Info().Int64("user_id", userID).Msg("[UserRepository-GetUserByID] User not found")
+			return nil, gorm.ErrRecordNotFound
+		}
+		log.Error().Err(err).Int64("user_id", userID).Msg("[UserRepository-GetUserByID] Failed to get user by ID")
+		return nil, err
+	}
+
+	var roleName string
+	if len(modelUser.Roles) > 0 {
+		roleName = modelUser.Roles[0].Name
+	} else {
+		roleName = "user" // Default role
+	}
+
+	return &entity.UserEntity{
+		ID:         modelUser.ID,
+		Name:       modelUser.Name,
+		Email:      modelUser.Email,
+		Password:   modelUser.Password,
+		RoleName:   roleName,
+		Address:    modelUser.Address,
+		Lat:        modelUser.Lat,
+		Lng:        modelUser.Lng,
+		Phone:      modelUser.Phone,
+		Photo:      modelUser.Photo,
+		IsVerified: modelUser.IsVerified,
+	}, nil
+}
+
 func (u *UserRepository) GetUserByEmailIncludingUnverified(ctx context.Context, email string) (*entity.UserEntity, error) {
 	modelUser := model.User{}
 	if err := u.db.Where("email = ?", email).Preload("Roles").First(&modelUser).Error; err != nil {

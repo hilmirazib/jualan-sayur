@@ -23,6 +23,7 @@ type AuthServiceInterface interface {
 	ForgotPassword(ctx context.Context, email string) error
 	ResetPassword(ctx context.Context, token, newPassword, passwordConfirmation string) error
 	Logout(ctx context.Context, userID int64, sessionID, tokenString string, tokenExpiresAt int64) error
+	GetProfile(ctx context.Context, userID int64) (*entity.UserEntity, error)
 }
 
 type AuthService struct {
@@ -330,6 +331,20 @@ func (s *AuthService) Logout(ctx context.Context, userID int64, sessionID, token
 
 	log.Info().Int64("user_id", userID).Str("session_id", sessionID).Msg("[AuthService-Logout] User logged out successfully")
 	return nil
+}
+
+func (s *AuthService) GetProfile(ctx context.Context, userID int64) (*entity.UserEntity, error) {
+	user, err := s.userRepo.GetUserByID(ctx, userID)
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Msg("[AuthService-GetProfile] Failed to get user profile")
+		if err.Error() == "record not found" {
+			return nil, errors.New("user not found")
+		}
+		return nil, err
+	}
+
+	log.Info().Int64("user_id", userID).Msg("[AuthService-GetProfile] User profile retrieved successfully")
+	return user, nil
 }
 
 func (s *AuthService) generateVerificationToken() (string, error) {
