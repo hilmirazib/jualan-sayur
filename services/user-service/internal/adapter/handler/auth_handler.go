@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 	"user-service/internal/adapter/handler/request"
 	"user-service/internal/adapter/handler/response"
 	"user-service/internal/core/domain/entity"
@@ -363,7 +364,20 @@ func (a *AuthHandler) Logout(c echo.Context) error {
 	userID := c.Get("user_id").(int64)
 	sessionID := c.Get("session_id").(string)
 
-	err := a.userService.Logout(ctx, userID, sessionID, "", 0) // TODO: pass token and expiresAt for blacklist
+	// Get token from Authorization header for blacklist
+	authHeader := c.Request().Header.Get("Authorization")
+	tokenString := ""
+	if strings.HasPrefix(authHeader, "Bearer ") {
+		tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+	}
+
+	// Get token expiration time from JWT claims
+	tokenExpiresAt := int64(0)
+	if exp, ok := c.Get("exp").(int64); ok {
+		tokenExpiresAt = exp
+	}
+
+	err := a.userService.Logout(ctx, userID, sessionID, tokenString, tokenExpiresAt)
 	if err != nil {
 		log.Error().Err(err).Int64("user_id", userID).Str("session_id", sessionID).Msg("[AuthHandler-Logout] Logout failed")
 

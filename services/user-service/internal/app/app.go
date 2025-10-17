@@ -77,11 +77,12 @@ func RunServer() {
 	redisClient := cfg.RedisClient()
 	sessionRepo := repository.NewSessionRepository(redisClient, cfg)
 	verificationTokenRepo := repository.NewVerificationTokenRepository(app.DB)
+	blacklistTokenRepo := repository.NewBlacklistTokenRepository(app.DB)
 
 	// Initialize message publishers
 	emailPublisher := message.NewEmailPublisher(app.RabbitMQChannel)
 
-	app.UserService = service.NewUserService(app.UserRepo, sessionRepo, app.JWTUtil, verificationTokenRepo, emailPublisher, cfg)
+	app.UserService = service.NewUserService(app.UserRepo, sessionRepo, app.JWTUtil, verificationTokenRepo, emailPublisher, blacklistTokenRepo, cfg)
 
 	// Initialize handlers
 	userHandler := handler.NewUserHandler(app.UserService)
@@ -89,12 +90,12 @@ func RunServer() {
 	public := e.Group("/api/v1")
 	public.POST("/auth/signin", userHandler.SignIn)
 	public.POST("/auth/signup", userHandler.CreateUserAccount)
-	public.POST("/auth/logout", userHandler.Logout, middleware.JWTMiddleware(cfg, sessionRepo))
+	public.POST("/auth/logout", userHandler.Logout, middleware.JWTMiddleware(cfg, sessionRepo, blacklistTokenRepo))
 	public.GET("/auth/verify", userHandler.VerifyUserAccount)
 	public.POST("/auth/forgot-password", userHandler.ForgotPassword)
 	public.POST("/auth/reset-password", userHandler.ResetPassword)
 
-	admin := e.Group("/api/v1/admin", middleware.JWTMiddleware(cfg, sessionRepo))
+	admin := e.Group("/api/v1/admin", middleware.JWTMiddleware(cfg, sessionRepo, blacklistTokenRepo))
 	admin.GET("/check", userHandler.AdminCheck)
 
 	// Root endpoint - redirect to health
@@ -163,6 +164,7 @@ func NewApp(cfg *config.Config) (*App, error) {
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db.DB)
 	sessionRepo := repository.NewSessionRepository(redisClient, cfg)
+	blacklistTokenRepo := repository.NewBlacklistTokenRepository(db.DB)
 
 	// Initialize utilities
 	jwtUtil := utils.NewJWTUtil(cfg)
@@ -174,7 +176,7 @@ func NewApp(cfg *config.Config) (*App, error) {
 	}
 
 	// Initialize services
-	userService := service.NewUserService(userRepo, sessionRepo, jwtUtil, nil, emailPublisher, cfg)
+	userService := service.NewUserService(userRepo, sessionRepo, jwtUtil, nil, emailPublisher, blacklistTokenRepo, cfg)
 
 	return &App{
 		UserService:     userService,

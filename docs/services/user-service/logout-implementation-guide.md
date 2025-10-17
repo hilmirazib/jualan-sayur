@@ -47,9 +47,9 @@ Dokumen ini menjelaskan implementasi lengkap fitur logout pada User Service meng
 ### Data Flow - Logout Process
 
 ```
-Client Request → HTTP Handler → Service → Repository → Redis
-                                                ↓
-                                     (Future) Database Blacklist
+Client Request → HTTP Handler → Service → Repository → Redis & Database Blacklist
+                                                             ↓
+                                                Token Blacklisted (SHA256 Hash)
 ```
 
 ## 🚀 Implementation Steps
@@ -141,10 +141,19 @@ func (s *AuthService) Logout(ctx context.Context, userID int64, sessionID, token
         return errors.New("failed to logout")
     }
 
-    // TODO: Optional - Add token to blacklist for maximum security
-    // hash := sha256.Sum256([]byte(tokenString))
-    // tokenHash := hex.EncodeToString(hash[:])
-    // s.blacklistRepo.AddToBlacklist(ctx, tokenHash, tokenExpiresAt)
+    // Add token to blacklist for maximum security (prevent reuse if token stolen)
+    if tokenString != "" && tokenExpiresAt > 0 {
+        hash := sha256.Sum256([]byte(tokenString))
+        tokenHash := hex.EncodeToString(hash[:])
+
+        err = s.blacklistTokenRepo.AddToBlacklist(ctx, tokenHash, tokenExpiresAt)
+        if err != nil {
+            log.Error().Err(err).Int64("user_id", userID).Str("session_id", sessionID).Msg("[AuthService-Logout] Failed to add token to blacklist")
+            // Don't fail logout if blacklist fails, just log the error
+        } else {
+            log.Info().Int64("user_id", userID).Str("session_id", sessionID).Msg("[AuthService-Logout] Token added to blacklist successfully")
+        }
+    }
 
     log.Info().Int64("user_id", userID).Str("session_id", sessionID).Msg("[AuthService-Logout] User logged out successfully")
     return nil
@@ -169,8 +178,20 @@ func (a *AuthHandler) Logout(c echo.Context) error {
     userID := c.Get("user_id").(int64)
     sessionID := c.Get("session_id").(string)
 
-    // Call service logout
-    err := a.userService.Logout(ctx, userID, sessionID, "", 0)
+    // Get token from Authorization header for blacklist
+    authHeader := c.Request().Header.Get("Authorization")
+    tokenString := ""
+    if strings.HasPrefix(authHeader, "Bearer ") {
+        tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+    }
+
+    // Get token expiration time from JWT claims
+    tokenExpiresAt := int64(0)
+    if exp, ok := c.Get("exp").(int64); ok {
+        tokenExpiresAt = exp
+    }
+
+    err := a.userService.Logout(ctx, userID, sessionID, tokenString, tokenExpiresAt)
     if err != nil {
         log.Error().Err(err).Int64("user_id", userID).Str("session_id", sessionID).Msg("[AuthHandler-Logout] Logout failed")
         switch err.Error() {
@@ -274,11 +295,11 @@ curl -X POST \
 ### Current Implementation
 ✅ **Session Invalidation**: Token langsung invalid setelah delete dari Redis
 ✅ **JWT Expiration**: Token tetap expirable by design
-✅ **Middleware Validation**: Double check di setiap request
+✅ **Token Blacklist**: SHA256 hash token disimpan di database untuk mencegah reuse
+✅ **Middleware Validation**: Double check di setiap request termasuk blacklist check
 ✅ **Audit Logging**: Full logging untuk compliance
 
 ### Enhanced Security (Future Implementations)
-🔄 **Token Blacklist**: Prevent stolen token reuse
 🔄 **Refresh Token Rotation**: More secure session management
 🔄 **Device Tracking**: Session per device
 🔄 **Rate Limiting**: Prevent logout abuse
@@ -323,7 +344,9 @@ DB_NAME=micro_sayur
 - Logout request count per minute
 - Redis session deletion latency
 - Failed logout percentage
-- Token blacklist size (if implemented)
+- Token blacklist size (implemented)
+- Blacklist check latency
+- Token reuse prevention rate
 
 ### Rollback Strategy
 1. Rollback migration if needed
@@ -371,18 +394,32 @@ DB_NAME=micro_sayur
 
 ## 🔄 Future Enhancements
 
-### Phase 2: Token Blacklist
+### Phase 2: Token Blacklist (COMPLETED)
 ```go
-// Enhanced logout with blacklist
+// Current implementation with blacklist
 func (s *AuthService) Logout(ctx context.Context, userID int64, sessionID, tokenString string, tokenExpiresAt int64) error {
-    // Delete session (immediate invalidation)
-    s.sessionRepo.DeleteToken(ctx, userID, sessionID)
+    // Delete session from Redis (primary logout mechanism)
+    err := s.sessionRepo.DeleteToken(ctx, userID, sessionID)
+    if err != nil {
+        log.Error().Err(err).Int64("user_id", userID).Str("session_id", sessionID).Msg("[AuthService-Logout] Failed to delete session token")
+        return errors.New("failed to logout")
+    }
 
-    // Add to blacklist (prevent reuse if token stolen)
-    hash := sha256.Sum256([]byte(tokenString))
-    tokenHash := hex.EncodeToString(hash[:])
-    s.blacklistRepo.AddToBlacklist(ctx, tokenHash, tokenExpiresAt)
+    // Add token to blacklist for maximum security (prevent reuse if token stolen)
+    if tokenString != "" && tokenExpiresAt > 0 {
+        hash := sha256.Sum256([]byte(tokenString))
+        tokenHash := hex.EncodeToString(hash[:])
 
+        err = s.blacklistTokenRepo.AddToBlacklist(ctx, tokenHash, tokenExpiresAt)
+        if err != nil {
+            log.Error().Err(err).Int64("user_id", userID).Str("session_id", sessionID).Msg("[AuthService-Logout] Failed to add token to blacklist")
+            // Don't fail logout if blacklist fails, just log the error
+        } else {
+            log.Info().Int64("user_id", userID).Str("session_id", sessionID).Msg("[AuthService-Logout] Token added to blacklist successfully")
+        }
+    }
+
+    log.Info().Int64("user_id", userID).Str("session_id", sessionID).Msg("[AuthService-Logout] User logged out successfully")
     return nil
 }
 ```

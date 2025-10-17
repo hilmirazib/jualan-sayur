@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -30,15 +31,17 @@ type AuthService struct {
 	jwtUtil               port.JWTInterface
 	verificationTokenRepo port.VerificationTokenInterface
 	emailPublisher        port.EmailInterface
+	blacklistTokenRepo    port.BlacklistTokenInterface
 }
 
-func NewAuthService(userRepo port.UserRepositoryInterface, sessionRepo port.SessionInterface, jwtUtil port.JWTInterface, verificationTokenRepo port.VerificationTokenInterface, emailPublisher port.EmailInterface) AuthServiceInterface {
+func NewAuthService(userRepo port.UserRepositoryInterface, sessionRepo port.SessionInterface, jwtUtil port.JWTInterface, verificationTokenRepo port.VerificationTokenInterface, emailPublisher port.EmailInterface, blacklistTokenRepo port.BlacklistTokenInterface) AuthServiceInterface {
 	return &AuthService{
 		userRepo:              userRepo,
 		sessionRepo:           sessionRepo,
 		jwtUtil:               jwtUtil,
 		verificationTokenRepo: verificationTokenRepo,
 		emailPublisher:        emailPublisher,
+		blacklistTokenRepo:    blacklistTokenRepo,
 	}
 }
 
@@ -304,11 +307,25 @@ func (s *AuthService) validatePassword(password, confirmation string) error {
 }
 
 func (s *AuthService) Logout(ctx context.Context, userID int64, sessionID, tokenString string, tokenExpiresAt int64) error {
-	// Delete session from Redis
+	// Delete session from Redis (primary logout mechanism)
 	err := s.sessionRepo.DeleteToken(ctx, userID, sessionID)
 	if err != nil {
 		log.Error().Err(err).Int64("user_id", userID).Str("session_id", sessionID).Msg("[AuthService-Logout] Failed to delete session token")
 		return errors.New("failed to logout")
+	}
+
+	// Add token to blacklist for maximum security (prevent reuse if token stolen)
+	if tokenString != "" && tokenExpiresAt > 0 {
+		hash := sha256.Sum256([]byte(tokenString))
+		tokenHash := hex.EncodeToString(hash[:])
+
+		err = s.blacklistTokenRepo.AddToBlacklist(ctx, tokenHash, tokenExpiresAt)
+		if err != nil {
+			log.Error().Err(err).Int64("user_id", userID).Str("session_id", sessionID).Msg("[AuthService-Logout] Failed to add token to blacklist")
+			// Don't fail logout if blacklist fails, just log the error
+		} else {
+			log.Info().Int64("user_id", userID).Str("session_id", sessionID).Msg("[AuthService-Logout] Token added to blacklist successfully")
+		}
 	}
 
 	log.Info().Int64("user_id", userID).Str("session_id", sessionID).Msg("[AuthService-Logout] User logged out successfully")

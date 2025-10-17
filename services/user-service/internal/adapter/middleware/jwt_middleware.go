@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"strings"
 	"user-service/config"
@@ -11,8 +13,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// JWTMiddleware creates JWT authentication middleware with Redis session validation
-func JWTMiddleware(cfg *config.Config, sessionRepo port.SessionInterface) echo.MiddlewareFunc {
+// JWTMiddleware creates JWT authentication middleware with Redis session validation and blacklist check
+func JWTMiddleware(cfg *config.Config, sessionRepo port.SessionInterface, blacklistRepo port.BlacklistTokenInterface) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// Get token from Authorization header
@@ -47,6 +49,23 @@ func JWTMiddleware(cfg *config.Config, sessionRepo port.SessionInterface) echo.M
 				})
 			}
 
+			// Check if token is blacklisted
+			if blacklistRepo != nil {
+				hash := sha256.Sum256([]byte(tokenString))
+				tokenHash := hex.EncodeToString(hash[:])
+
+				if blacklistRepo.IsTokenBlacklisted(c.Request().Context(), tokenHash) {
+					log.Warn().
+						Int64("user_id", claims.UserID).
+						Str("session_id", claims.SessionID).
+						Msg("[JWTMiddleware] Token is blacklisted")
+					return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+						"message": "Token has been revoked",
+						"data":    nil,
+					})
+				}
+			}
+
 			// Validate session in Redis
 			if claims.SessionID != "" {
 				isValid := sessionRepo.ValidateToken(c.Request().Context(), claims.UserID, claims.SessionID, tokenString)
@@ -72,6 +91,7 @@ func JWTMiddleware(cfg *config.Config, sessionRepo port.SessionInterface) echo.M
 			c.Set("user_email", claims.Email)
 			c.Set("user_role", claims.RoleName)
 			c.Set("session_id", claims.SessionID)
+			c.Set("exp", claims.ExpiresAt.Unix()) // Set expiration time for logout
 
 			log.Info().
 				Int64("user_id", claims.UserID).

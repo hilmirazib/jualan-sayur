@@ -16,9 +16,9 @@ type UserService struct {
 	config *config.Config
 }
 
-func NewUserService(userRepo port.UserRepositoryInterface, sessionRepo port.SessionInterface, jwtUtil port.JWTInterface, verificationTokenRepo port.VerificationTokenInterface, emailPublisher port.EmailInterface, cfg *config.Config) port.UserServiceInterface {
+func NewUserService(userRepo port.UserRepositoryInterface, sessionRepo port.SessionInterface, jwtUtil port.JWTInterface, verificationTokenRepo port.VerificationTokenInterface, emailPublisher port.EmailInterface, blacklistTokenRepo port.BlacklistTokenInterface, cfg *config.Config) port.UserServiceInterface {
 	return &UserService{
-		AuthServiceInterface: NewAuthService(userRepo, sessionRepo, jwtUtil, verificationTokenRepo, emailPublisher),
+		AuthServiceInterface: NewAuthService(userRepo, sessionRepo, jwtUtil, verificationTokenRepo, emailPublisher, blacklistTokenRepo),
 		config:               cfg,
 	}
 }
