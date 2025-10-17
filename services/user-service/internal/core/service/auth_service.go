@@ -21,23 +21,24 @@ type AuthServiceInterface interface {
 	VerifyUserAccount(ctx context.Context, token string) error
 	ForgotPassword(ctx context.Context, email string) error
 	ResetPassword(ctx context.Context, token, newPassword, passwordConfirmation string) error
+	Logout(ctx context.Context, userID int64, sessionID, tokenString string, tokenExpiresAt int64) error
 }
 
 type AuthService struct {
-	userRepo             port.UserRepositoryInterface
-	sessionRepo          port.SessionInterface
-	jwtUtil              port.JWTInterface
+	userRepo              port.UserRepositoryInterface
+	sessionRepo           port.SessionInterface
+	jwtUtil               port.JWTInterface
 	verificationTokenRepo port.VerificationTokenInterface
-	emailPublisher       port.EmailInterface
+	emailPublisher        port.EmailInterface
 }
 
 func NewAuthService(userRepo port.UserRepositoryInterface, sessionRepo port.SessionInterface, jwtUtil port.JWTInterface, verificationTokenRepo port.VerificationTokenInterface, emailPublisher port.EmailInterface) AuthServiceInterface {
 	return &AuthService{
-		userRepo:             userRepo,
-		sessionRepo:          sessionRepo,
-		jwtUtil:              jwtUtil,
+		userRepo:              userRepo,
+		sessionRepo:           sessionRepo,
+		jwtUtil:               jwtUtil,
 		verificationTokenRepo: verificationTokenRepo,
-		emailPublisher:       emailPublisher,
+		emailPublisher:        emailPublisher,
 	}
 }
 
@@ -299,6 +300,18 @@ func (s *AuthService) validatePassword(password, confirmation string) error {
 		return errors.New("password confirmation does not match")
 	}
 
+	return nil
+}
+
+func (s *AuthService) Logout(ctx context.Context, userID int64, sessionID, tokenString string, tokenExpiresAt int64) error {
+	// Delete session from Redis
+	err := s.sessionRepo.DeleteToken(ctx, userID, sessionID)
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Str("session_id", sessionID).Msg("[AuthService-Logout] Failed to delete session token")
+		return errors.New("failed to logout")
+	}
+
+	log.Info().Int64("user_id", userID).Str("session_id", sessionID).Msg("[AuthService-Logout] User logged out successfully")
 	return nil
 }
 

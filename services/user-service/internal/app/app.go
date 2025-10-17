@@ -89,6 +89,7 @@ func RunServer() {
 	public := e.Group("/api/v1")
 	public.POST("/auth/signin", userHandler.SignIn)
 	public.POST("/auth/signup", userHandler.CreateUserAccount)
+	public.POST("/auth/logout", userHandler.Logout, middleware.JWTMiddleware(cfg, sessionRepo))
 	public.GET("/auth/verify", userHandler.VerifyUserAccount)
 	public.POST("/auth/forgot-password", userHandler.ForgotPassword)
 	public.POST("/auth/reset-password", userHandler.ResetPassword)

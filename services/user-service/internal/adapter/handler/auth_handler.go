@@ -20,6 +20,7 @@ type AuthHandlerInterface interface {
 	VerifyUserAccount(ctx echo.Context) error
 	ForgotPassword(ctx echo.Context) error
 	ResetPassword(ctx echo.Context) error
+	Logout(ctx echo.Context) error
 }
 
 type AuthHandler struct {
@@ -349,6 +350,35 @@ func (a *AuthHandler) ResetPassword(c echo.Context) error {
 
 	resp.Message = "Password reset successfully. You can now sign in with your new password."
 	log.Info().Str("token", req.Token).Msg("[AuthHandler-ResetPassword] Password reset successfully")
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+func (a *AuthHandler) Logout(c echo.Context) error {
+	var (
+		resp = response.DefaultResponse{}
+		ctx  = c.Request().Context()
+	)
+
+	userID := c.Get("user_id").(int64)
+	sessionID := c.Get("session_id").(string)
+
+	err := a.userService.Logout(ctx, userID, sessionID, "", 0) // TODO: pass token and expiresAt for blacklist
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Str("session_id", sessionID).Msg("[AuthHandler-Logout] Logout failed")
+
+		switch err.Error() {
+		case "failed to logout":
+			resp.Message = "Failed to logout"
+			return c.JSON(http.StatusInternalServerError, resp)
+		default:
+			resp.Message = "Internal server error"
+			return c.JSON(http.StatusInternalServerError, resp)
+		}
+	}
+
+	resp.Message = "Logout successful"
+	log.Info().Int64("user_id", userID).Str("session_id", sessionID).Msg("[AuthHandler-Logout] User logged out successfully")
 
 	return c.JSON(http.StatusOK, resp)
 }
