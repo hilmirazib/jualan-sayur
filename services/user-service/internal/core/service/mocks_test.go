@@ -55,6 +55,14 @@ func (m *MockUserRepository) UpdateUserPassword(ctx context.Context, userID int6
 	return args.Error(0)
 }
 
+func (m *MockUserRepository) GetUserByID(ctx context.Context, userID int64) (*entity.UserEntity, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.UserEntity), args.Error(1)
+}
+
 // MockSessionRepository mocks the session repository
 type MockSessionRepository struct {
 	mock.Mock

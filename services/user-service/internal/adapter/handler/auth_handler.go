@@ -22,6 +22,7 @@ type AuthHandlerInterface interface {
 	ForgotPassword(ctx echo.Context) error
 	ResetPassword(ctx echo.Context) error
 	Logout(ctx echo.Context) error
+	Profile(ctx echo.Context) error
 }
 
 type AuthHandler struct {
@@ -393,6 +394,48 @@ func (a *AuthHandler) Logout(c echo.Context) error {
 
 	resp.Message = "Logout successful"
 	log.Info().Int64("user_id", userID).Str("session_id", sessionID).Msg("[AuthHandler-Logout] User logged out successfully")
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+func (a *AuthHandler) Profile(c echo.Context) error {
+	var (
+		resp = response.DefaultResponse{}
+		ctx  = c.Request().Context()
+	)
+
+	userID := c.Get("user_id").(int64)
+
+	user, err := a.userService.GetProfile(ctx, userID)
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Msg("[AuthHandler-Profile] Failed to get user profile")
+
+		switch err.Error() {
+		case "user not found":
+			resp.Message = "User not found"
+			return c.JSON(http.StatusNotFound, resp)
+		default:
+			resp.Message = "Internal server error"
+			return c.JSON(http.StatusInternalServerError, resp)
+		}
+	}
+
+	profileResp := response.ProfileResponse{
+		ID:      user.ID,
+		Email:   user.Email,
+		Role:    user.RoleName,
+		Name:    user.Name,
+		Phone:   user.Phone,
+		Address: user.Address,
+		Lat:     user.Lat,
+		Lng:     user.Lng,
+		Photo:   user.Photo,
+	}
+
+	resp.Message = "Profile retrieved successfully"
+	resp.Data = profileResp
+
+	log.Info().Int64("user_id", userID).Msg("[AuthHandler-Profile] User profile retrieved successfully")
 
 	return c.JSON(http.StatusOK, resp)
 }
