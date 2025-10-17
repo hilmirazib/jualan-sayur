@@ -15,7 +15,7 @@ import (
 func TestUserService_SignIn_UserNotFound(t *testing.T) {
 	// Setup
 	mockRepo := new(MockUserRepository)
-	service := NewUserService(mockRepo, nil, nil, nil, nil, &config.Config{})
+	service := NewUserService(mockRepo, nil, nil, nil, nil, nil, &config.Config{})
 
 	ctx := context.Background()
 	email := "notfound@example.com"
@@ -40,7 +40,7 @@ func TestUserService_SignIn_UserNotFound(t *testing.T) {
 func TestUserService_SignIn_InvalidEmail(t *testing.T) {
 	// Setup
 	mockRepo := new(MockUserRepository)
-	service := NewUserService(mockRepo, nil, nil, nil, nil, &config.Config{})
+	service := NewUserService(mockRepo, nil, nil, nil, nil, nil, &config.Config{})
 
 	ctx := context.Background()
 
@@ -65,7 +65,7 @@ func TestUserService_CreateUserAccount_Success(t *testing.T) {
 	mockUserRepo := new(MockUserRepository)
 	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
 	mockEmailPublisher := new(MockEmailPublisher)
-	service := NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, mockEmailPublisher, &config.Config{})
+	service := NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, mockEmailPublisher, nil, &config.Config{})
 
 	ctx := context.Background()
 	email := "test@example.com"
@@ -92,7 +92,7 @@ func TestUserService_CreateUserAccount_Success(t *testing.T) {
 func TestUserService_CreateUserAccount_EmailAlreadyExists(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
-	service := NewUserService(mockUserRepo, nil, nil, nil, nil, &config.Config{})
+	service := NewUserService(mockUserRepo, nil, nil, nil, nil, nil, &config.Config{})
 
 	ctx := context.Background()
 	email := "existing@example.com"
@@ -113,7 +113,7 @@ func TestUserService_VerifyUserAccount_Success(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
 	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	service := NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, nil, &config.Config{})
+	service := NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, nil, nil, &config.Config{})
 
 	ctx := context.Background()
 	token := "valid-token"
@@ -144,7 +144,7 @@ func TestUserService_AdminCheck_Success(t *testing.T) {
 			JwtIssuer:    "test-issuer",
 		},
 	}
-	service := NewUserService(mockUserRepo, mockSessionRepo, mockJWTUtil, nil, nil, mockConfig)
+	service := NewUserService(mockUserRepo, mockSessionRepo, mockJWTUtil, nil, nil, nil, mockConfig)
 
 	ctx := context.Background()
 	email := "admin@example.com"
@@ -186,7 +186,7 @@ func TestUserService_ForgotPassword_Success(t *testing.T) {
 	mockUserRepo := new(MockUserRepository)
 	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
 	mockEmailPublisher := new(MockEmailPublisher)
-	service := NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, mockEmailPublisher, &config.Config{})
+	service := NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, mockEmailPublisher, nil, &config.Config{})
 
 	ctx := context.Background()
 	email := "user@example.com"
@@ -215,7 +215,7 @@ func TestUserService_ForgotPassword_Success(t *testing.T) {
 func TestUserService_ForgotPassword_InvalidEmail(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
-	service := NewUserService(mockUserRepo, nil, nil, nil, nil, &config.Config{})
+	service := NewUserService(mockUserRepo, nil, nil, nil, nil, nil, &config.Config{})
 
 	ctx := context.Background()
 
@@ -233,7 +233,7 @@ func TestUserService_ForgotPassword_InvalidEmail(t *testing.T) {
 func TestUserService_ForgotPassword_UserNotFound(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
-	service := NewUserService(mockUserRepo, nil, nil, nil, nil, &config.Config{})
+	service := NewUserService(mockUserRepo, nil, nil, nil, nil, nil, &config.Config{})
 
 	ctx := context.Background()
 	email := "notfound@example.com"
@@ -252,7 +252,7 @@ func TestUserService_ForgotPassword_UserNotFound(t *testing.T) {
 func TestUserService_ForgotPassword_UserNotVerified(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
-	service := NewUserService(mockUserRepo, nil, nil, nil, nil, &config.Config{})
+	service := NewUserService(mockUserRepo, nil, nil, nil, nil, nil, &config.Config{})
 
 	ctx := context.Background()
 	email := "unverified@example.com"
@@ -278,7 +278,7 @@ func TestUserService_ResetPassword_Success(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
 	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	service := NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, nil, &config.Config{})
+	service := NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, nil, nil, &config.Config{})
 
 	ctx := context.Background()
 	token := "valid-reset-token"
@@ -308,7 +308,7 @@ func TestUserService_ResetPassword_Success(t *testing.T) {
 func TestUserService_ResetPassword_InvalidToken(t *testing.T) {
 	// Setup
 	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	service := NewUserService(nil, nil, nil, mockVerificationTokenRepo, nil, &config.Config{})
+	service := NewUserService(nil, nil, nil, mockVerificationTokenRepo, nil, nil, &config.Config{})
 
 	ctx := context.Background()
 	token := "invalid-token"
@@ -328,7 +328,7 @@ func TestUserService_ResetPassword_InvalidToken(t *testing.T) {
 func TestUserService_ResetPassword_PasswordMismatch(t *testing.T) {
 	// Setup
 	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	service := NewUserService(nil, nil, nil, mockVerificationTokenRepo, nil, &config.Config{})
+	service := NewUserService(nil, nil, nil, mockVerificationTokenRepo, nil, nil, &config.Config{})
 
 	ctx := context.Background()
 	token := "valid-token"
@@ -349,7 +349,7 @@ func TestUserService_ResetPassword_PasswordMismatch(t *testing.T) {
 func TestUserService_ResetPassword_PasswordTooShort(t *testing.T) {
 	// Setup
 	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	service := NewUserService(nil, nil, nil, mockVerificationTokenRepo, nil, &config.Config{})
+	service := NewUserService(nil, nil, nil, mockVerificationTokenRepo, nil, nil, &config.Config{})
 
 	ctx := context.Background()
 	token := "valid-token"
@@ -370,7 +370,7 @@ func TestUserService_ResetPassword_PasswordTooShort(t *testing.T) {
 func TestUserService_ResetPassword_WrongTokenType(t *testing.T) {
 	// Setup
 	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	service := NewUserService(nil, nil, nil, mockVerificationTokenRepo, nil, &config.Config{})
+	service := NewUserService(nil, nil, nil, mockVerificationTokenRepo, nil, nil, &config.Config{})
 
 	ctx := context.Background()
 	token := "email-verification-token"
@@ -393,4 +393,119 @@ func TestUserService_ResetPassword_WrongTokenType(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, "invalid token type", err.Error())
 	mockVerificationTokenRepo.AssertExpectations(t)
+}
+
+func TestUserService_Logout_Success(t *testing.T) {
+	// Setup
+	mockSessionRepo := new(MockSessionRepository)
+	mockBlacklistRepo := new(MockBlacklistTokenRepository)
+	service := NewUserService(nil, mockSessionRepo, nil, nil, nil, mockBlacklistRepo, &config.Config{})
+
+	ctx := context.Background()
+	userID := int64(1)
+	sessionID := "session-123"
+	tokenString := "jwt-token-123"
+	tokenExpiresAt := int64(1640995200) // 2022-01-01 00:00:00 UTC
+
+	// Mock expectations
+	mockSessionRepo.On("DeleteToken", ctx, userID, sessionID).Return(nil)
+	mockBlacklistRepo.On("AddToBlacklist", ctx, mock.AnythingOfType("string"), tokenExpiresAt).Return(nil)
+
+	// Execute
+	err := service.Logout(ctx, userID, sessionID, tokenString, tokenExpiresAt)
+
+	// Assert
+	assert.NoError(t, err)
+	mockSessionRepo.AssertExpectations(t)
+	mockBlacklistRepo.AssertExpectations(t)
+}
+
+func TestUserService_Logout_SessionDeletionFails(t *testing.T) {
+	// Setup
+	mockSessionRepo := new(MockSessionRepository)
+	service := NewUserService(nil, mockSessionRepo, nil, nil, nil, nil, &config.Config{})
+
+	ctx := context.Background()
+	userID := int64(1)
+	sessionID := "session-123"
+
+	// Mock expectations - session deletion fails
+	mockSessionRepo.On("DeleteToken", ctx, userID, sessionID).Return(errors.New("redis connection failed"))
+
+	// Execute
+	err := service.Logout(ctx, userID, sessionID, "", 0)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Equal(t, "failed to logout", err.Error())
+	mockSessionRepo.AssertExpectations(t)
+}
+
+func TestUserService_Logout_BlacklistFailureIgnored(t *testing.T) {
+	// Setup
+	mockSessionRepo := new(MockSessionRepository)
+	mockBlacklistRepo := new(MockBlacklistTokenRepository)
+	service := NewUserService(nil, mockSessionRepo, nil, nil, nil, mockBlacklistRepo, &config.Config{})
+
+	ctx := context.Background()
+	userID := int64(1)
+	sessionID := "session-123"
+	tokenString := "jwt-token-123"
+	tokenExpiresAt := int64(1640995200)
+
+	// Mock expectations
+	mockSessionRepo.On("DeleteToken", ctx, userID, sessionID).Return(nil)
+	mockBlacklistRepo.On("AddToBlacklist", ctx, mock.AnythingOfType("string"), tokenExpiresAt).Return(errors.New("database connection failed"))
+
+	// Execute - should succeed even if blacklist fails
+	err := service.Logout(ctx, userID, sessionID, tokenString, tokenExpiresAt)
+
+	// Assert - logout should succeed despite blacklist failure
+	assert.NoError(t, err)
+	mockSessionRepo.AssertExpectations(t)
+	mockBlacklistRepo.AssertExpectations(t)
+}
+
+func TestUserService_Logout_WithoutToken(t *testing.T) {
+	// Setup
+	mockSessionRepo := new(MockSessionRepository)
+	service := NewUserService(nil, mockSessionRepo, nil, nil, nil, nil, &config.Config{})
+
+	ctx := context.Background()
+	userID := int64(1)
+	sessionID := "session-123"
+
+	// Mock expectations
+	mockSessionRepo.On("DeleteToken", ctx, userID, sessionID).Return(nil)
+
+	// Execute - logout without token (backward compatibility)
+	err := service.Logout(ctx, userID, sessionID, "", 0)
+
+	// Assert
+	assert.NoError(t, err)
+	mockSessionRepo.AssertExpectations(t)
+}
+
+func TestUserService_Logout_WithoutExpiration(t *testing.T) {
+	// Setup
+	mockSessionRepo := new(MockSessionRepository)
+	mockBlacklistRepo := new(MockBlacklistTokenRepository)
+	service := NewUserService(nil, mockSessionRepo, nil, nil, nil, mockBlacklistRepo, &config.Config{})
+
+	ctx := context.Background()
+	userID := int64(1)
+	sessionID := "session-123"
+	tokenString := "jwt-token-123"
+
+	// Mock expectations
+	mockSessionRepo.On("DeleteToken", ctx, userID, sessionID).Return(nil)
+	// Blacklist should not be called when expiresAt is 0
+	mockBlacklistRepo.AssertNotCalled(t, "AddToBlacklist", mock.Anything, mock.Anything, mock.Anything)
+
+	// Execute - logout with token but no expiration
+	err := service.Logout(ctx, userID, sessionID, tokenString, 0)
+
+	// Assert
+	assert.NoError(t, err)
+	mockSessionRepo.AssertExpectations(t)
 }

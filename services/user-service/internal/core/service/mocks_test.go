@@ -150,3 +150,18 @@ func (m *MockEmailPublisher) SendPasswordResetEmail(ctx context.Context, email, 
 	args := m.Called(ctx, email, token)
 	return args.Error(0)
 }
+
+// MockBlacklistTokenRepository mocks the blacklist token repository
+type MockBlacklistTokenRepository struct {
+	mock.Mock
+}
+
+func (m *MockBlacklistTokenRepository) AddToBlacklist(ctx context.Context, tokenHash string, expiresAt int64) error {
+	args := m.Called(ctx, tokenHash, expiresAt)
+	return args.Error(0)
+}
+
+func (m *MockBlacklistTokenRepository) IsTokenBlacklisted(ctx context.Context, tokenHash string) bool {
+	args := m.Called(ctx, tokenHash)
+	return args.Bool(0)
+}
