@@ -13,7 +13,8 @@ import (
 func TestUserService_GetProfile_Success(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
-	service := NewUserService(mockUserRepo, nil, nil, nil, nil, nil, &config.Config{})
+	mockStorage := new(MockStorage)
+	service := NewUserService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -46,7 +47,8 @@ func TestUserService_GetProfile_Success(t *testing.T) {
 func TestUserService_GetProfile_UserNotFound(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
-	service := NewUserService(mockUserRepo, nil, nil, nil, nil, nil, &config.Config{})
+	mockStorage := new(MockStorage)
+	service := NewUserService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	userID := int64(999)
@@ -67,7 +69,8 @@ func TestUserService_GetProfile_UserNotFound(t *testing.T) {
 func TestUserService_GetProfile_DatabaseError(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
-	service := NewUserService(mockUserRepo, nil, nil, nil, nil, nil, &config.Config{})
+	mockStorage := new(MockStorage)
+	service := NewUserService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	userID := int64(1)

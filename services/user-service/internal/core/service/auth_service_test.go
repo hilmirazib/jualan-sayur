@@ -15,7 +15,8 @@ import (
 func TestUserService_SignIn_UserNotFound(t *testing.T) {
 	// Setup
 	mockRepo := new(MockUserRepository)
-	service := NewUserService(mockRepo, nil, nil, nil, nil, nil, &config.Config{})
+	mockStorage := new(MockStorage)
+	service := NewUserService(mockRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	email := "notfound@example.com"
@@ -40,7 +41,8 @@ func TestUserService_SignIn_UserNotFound(t *testing.T) {
 func TestUserService_SignIn_InvalidEmail(t *testing.T) {
 	// Setup
 	mockRepo := new(MockUserRepository)
-	service := NewUserService(mockRepo, nil, nil, nil, nil, nil, &config.Config{})
+	mockStorage := new(MockStorage)
+	service := NewUserService(mockRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 
@@ -65,7 +67,8 @@ func TestUserService_CreateUserAccount_Success(t *testing.T) {
 	mockUserRepo := new(MockUserRepository)
 	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
 	mockEmailPublisher := new(MockEmailPublisher)
-	service := NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, mockEmailPublisher, nil, &config.Config{})
+	mockStorage := new(MockStorage)
+	service := NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, mockEmailPublisher, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	email := "test@example.com"
@@ -92,7 +95,8 @@ func TestUserService_CreateUserAccount_Success(t *testing.T) {
 func TestUserService_CreateUserAccount_EmailAlreadyExists(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
-	service := NewUserService(mockUserRepo, nil, nil, nil, nil, nil, &config.Config{})
+	mockStorage := new(MockStorage)
+	service := NewUserService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	email := "existing@example.com"
@@ -113,7 +117,8 @@ func TestUserService_VerifyUserAccount_Success(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
 	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	service := NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, nil, nil, &config.Config{})
+	mockStorage := new(MockStorage)
+	service := NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	token := "valid-token"
@@ -138,13 +143,14 @@ func TestUserService_AdminCheck_Success(t *testing.T) {
 	mockUserRepo := new(MockUserRepository)
 	mockSessionRepo := new(MockSessionRepository)
 	mockJWTUtil := new(MockJWTUtil)
+	mockStorage := new(MockStorage)
 	mockConfig := &config.Config{
 		App: config.App{
 			JwtSecretKey: "test-secret-key",
 			JwtIssuer:    "test-issuer",
 		},
 	}
-	service := NewUserService(mockUserRepo, mockSessionRepo, mockJWTUtil, nil, nil, nil, mockConfig)
+	service := NewUserService(mockUserRepo, mockSessionRepo, mockJWTUtil, nil, nil, nil, mockStorage, mockConfig)
 
 	ctx := context.Background()
 	email := "admin@example.com"

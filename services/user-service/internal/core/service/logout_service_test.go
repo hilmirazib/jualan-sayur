@@ -14,7 +14,8 @@ func TestUserService_Logout_Success(t *testing.T) {
 	// Setup
 	mockSessionRepo := new(MockSessionRepository)
 	mockBlacklistRepo := new(MockBlacklistTokenRepository)
-	service := NewUserService(nil, mockSessionRepo, nil, nil, nil, mockBlacklistRepo, &config.Config{})
+	mockStorage := new(MockStorage)
+	service := NewUserService(nil, mockSessionRepo, nil, nil, nil, mockBlacklistRepo, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -38,7 +39,8 @@ func TestUserService_Logout_Success(t *testing.T) {
 func TestUserService_Logout_SessionDeletionFails(t *testing.T) {
 	// Setup
 	mockSessionRepo := new(MockSessionRepository)
-	service := NewUserService(nil, mockSessionRepo, nil, nil, nil, nil, &config.Config{})
+	mockStorage := new(MockStorage)
+	service := NewUserService(nil, mockSessionRepo, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -60,7 +62,8 @@ func TestUserService_Logout_BlacklistFailureIgnored(t *testing.T) {
 	// Setup
 	mockSessionRepo := new(MockSessionRepository)
 	mockBlacklistRepo := new(MockBlacklistTokenRepository)
-	service := NewUserService(nil, mockSessionRepo, nil, nil, nil, mockBlacklistRepo, &config.Config{})
+	mockStorage := new(MockStorage)
+	service := NewUserService(nil, mockSessionRepo, nil, nil, nil, mockBlacklistRepo, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -84,7 +87,8 @@ func TestUserService_Logout_BlacklistFailureIgnored(t *testing.T) {
 func TestUserService_Logout_WithoutToken(t *testing.T) {
 	// Setup
 	mockSessionRepo := new(MockSessionRepository)
-	service := NewUserService(nil, mockSessionRepo, nil, nil, nil, nil, &config.Config{})
+	mockStorage := new(MockStorage)
+	service := NewUserService(nil, mockSessionRepo, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -106,7 +110,8 @@ func TestUserService_Logout_WithoutExpiration(t *testing.T) {
 	mockUserRepo := new(MockUserRepository)
 	mockSessionRepo := new(MockSessionRepository)
 	mockBlacklistRepo := new(MockBlacklistTokenRepository)
-	service := NewUserService(mockUserRepo, mockSessionRepo, nil, nil, nil, mockBlacklistRepo, &config.Config{})
+	mockStorage := new(MockStorage)
+	service := NewUserService(mockUserRepo, mockSessionRepo, nil, nil, nil, mockBlacklistRepo, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	userID := int64(1)

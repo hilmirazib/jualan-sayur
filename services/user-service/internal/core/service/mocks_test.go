@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"io"
 	"user-service/internal/core/domain/entity"
 	"user-service/utils"
 
@@ -61,6 +62,11 @@ func (m *MockUserRepository) GetUserByID(ctx context.Context, userID int64) (*en
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*entity.UserEntity), args.Error(1)
+}
+
+func (m *MockUserRepository) UpdateUserPhoto(ctx context.Context, userID int64, photoURL string) error {
+	args := m.Called(ctx, userID, photoURL)
+	return args.Error(0)
 }
 
 // MockSessionRepository mocks the session repository
@@ -172,4 +178,19 @@ func (m *MockBlacklistTokenRepository) AddToBlacklist(ctx context.Context, token
 func (m *MockBlacklistTokenRepository) IsTokenBlacklisted(ctx context.Context, tokenHash string) bool {
 	args := m.Called(ctx, tokenHash)
 	return args.Bool(0)
+}
+
+// MockStorage mocks the storage interface
+type MockStorage struct {
+	mock.Mock
+}
+
+func (m *MockStorage) UploadFile(ctx context.Context, bucketName, objectName string, file io.Reader, contentType string) (string, error) {
+	args := m.Called(ctx, bucketName, objectName, file, contentType)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockStorage) DeleteFile(ctx context.Context, bucketName, objectName string) error {
+	args := m.Called(ctx, bucketName, objectName)
+	return args.Error(0)
 }
