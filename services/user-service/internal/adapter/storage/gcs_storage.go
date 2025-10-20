@@ -115,7 +115,7 @@ func (g *GCSStorage) DeleteFile(ctx context.Context, bucketName, objectName stri
 }
 
 // Helper function to validate image file
-func ValidateImageFile(file multipart.File, header *multipart.FileHeader) error {
+func ValidateImageFiles(file multipart.File, header *multipart.FileHeader) error {
 	// Check file size (max 5MB)
 	const maxSize = 5 << 20 // 5MB
 	if header.Size > maxSize {

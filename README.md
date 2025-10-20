@@ -3,8 +3,22 @@
 ## Prerequisites
 - Docker & Docker Compose installed
 - Go 1.21+ (for local development)
+- Make (optional, for using Makefile commands)
 
 ## Quick Setup
+
+### 🚀 **Auto Setup (Recommended - 1 Command)**
+
+```bash
+make dev-setup
+```
+
+This will automatically:
+- Start all Docker services (PostgreSQL, Redis, RabbitMQ)
+- Run database migrations
+- Setup everything for API testing
+
+### 🔄 Manual Setup
 
 1. **Clone the repository**
    ```bash
@@ -29,7 +43,12 @@
    go run cmd/migrate.go -cmd up
    ```
 
-4. **Access the database visually**
+4. **Setup test data for API testing**
+   ```bash
+   make setup-test-data
+   ```
+
+5. **Access the database visually**
    - Open browser: http://localhost:8080
    - System: PostgreSQL
    - Server: sayur-postgres
@@ -47,6 +66,7 @@ After migration, the following tables will be available:
 ## Services Access
 - **Adminer (Database UI)**: http://localhost:8080
 - **RabbitMQ Management**: http://localhost:15672 (user: sayur_user, pass: sayur_password)
+- **Hoppscotch Web (API Testing)**: https://hoppscotch.io (import collections dari `scripts/hoppscotch-web-collections.json`)
 
 ## Testing Configuration and Database
 

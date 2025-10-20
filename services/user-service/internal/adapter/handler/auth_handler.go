@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"io"
 	"net/http"
 	"strings"
 	"user-service/internal/adapter/handler/request"
 	"user-service/internal/adapter/handler/response"
+	"user-service/internal/adapter/storage"
 	"user-service/internal/core/domain/entity"
 	"user-service/internal/core/port"
 
@@ -457,6 +459,23 @@ func (a *AuthHandler) ImageUploadProfile(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, resp)
 	}
 
+	// Basic validation before opening file
+	log.Info().Int64("user_id", userID).Int64("file_size", file.Size).Str("filename", file.Filename).Str("content_type", file.Header.Get("Content-Type")).Msg("[AuthHandler-ImageUploadProfile] Starting file validation")
+
+	if file.Size == 0 {
+		log.Error().Int64("user_id", userID).Msg("[AuthHandler-ImageUploadProfile] File size is 0 - rejecting")
+		resp.Message = "File is empty"
+		return c.JSON(http.StatusBadRequest, resp)
+	}
+
+	if file.Size > 5<<20 { // 5MB
+		log.Error().Int64("user_id", userID).Int64("file_size", file.Size).Msg("[AuthHandler-ImageUploadProfile] File size too large")
+		resp.Message = "File size too large, maximum 5MB"
+		return c.JSON(http.StatusBadRequest, resp)
+	}
+
+	log.Info().Int64("user_id", userID).Int64("file_size", file.Size).Msg("[AuthHandler-ImageUploadProfile] File size validation passed")
+
 	// Open the uploaded file
 	src, err := file.Open()
 	if err != nil {
@@ -465,6 +484,28 @@ func (a *AuthHandler) ImageUploadProfile(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, resp)
 	}
 	defer src.Close()
+
+	// Validate image file using storage validation function
+	log.Info().Int64("user_id", userID).Msg("[AuthHandler-ImageUploadProfile] Starting ValidateImageFile")
+	if err := storage.ValidateImageFile(src, file); err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Msg("[AuthHandler-ImageUploadProfile] File validation failed")
+		resp.Message = err.Error()
+		return c.JSON(http.StatusBadRequest, resp)
+	}
+	log.Info().Int64("user_id", userID).Msg("[AuthHandler-ImageUploadProfile] ValidateImageFile passed")
+
+	// Reset file pointer after validation (important!)
+	log.Info().Int64("user_id", userID).Msg("[AuthHandler-ImageUploadProfile] Resetting file pointer")
+	if seeker, ok := src.(io.Seeker); ok {
+		if _, err := seeker.Seek(0, io.SeekStart); err != nil {
+			log.Error().Err(err).Int64("user_id", userID).Msg("[AuthHandler-ImageUploadProfile] Failed to reset file pointer")
+			resp.Message = "Failed to process file"
+			return c.JSON(http.StatusInternalServerError, resp)
+		}
+		log.Info().Int64("user_id", userID).Msg("[AuthHandler-ImageUploadProfile] File pointer reset successfully")
+	} else {
+		log.Warn().Int64("user_id", userID).Msg("[AuthHandler-ImageUploadProfile] File does not support seeking")
+	}
 
 	// Upload image
 	imageURL, err := a.userService.UploadProfileImage(ctx, userID, src, file.Header.Get("Content-Type"), file.Filename)

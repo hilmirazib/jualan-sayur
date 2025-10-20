@@ -2,23 +2,23 @@
 
 ## 📋 Overview
 
-Dokumen ini menjelaskan implementasi lengkap fitur upload image profile pada User Service menggunakan arsitektur Clean Architecture (Hexagonal). Fitur ini menggunakan Google Cloud Storage untuk penyimpanan file dengan validasi keamanan dan error handling yang komprehensif.
+Dokumen ini menjelaskan implementasi lengkap fitur upload image profile pada User Service menggunakan arsitektur Clean Architecture (Hexagonal). Fitur ini menggunakan Supabase Storage untuk penyimpanan file dengan validasi keamanan dan error handling yang komprehensif.
 
 ## ⚠️ **STATUS: BELUM DI TEST**
 
 **PENTING**: Implementasi ini telah selesai secara kode namun **BELUM DI TEST**. Sebelum melanjutkan development atau deployment, pastikan untuk:
 
-1. Setup Google Cloud Storage project dan credentials
+1. Setup Supabase project dan configure Storage
 2. Test upload endpoint dengan Postman/curl
 3. Verify file validation (size, type, extension)
 4. Test error handling scenarios
-5. Check database updates dan GCS bucket
+5. Check database updates dan Supabase bucket
 
 ## 🎯 Business Requirements
 
 ### Functional Requirements
 - User dapat upload foto profile dengan aman
-- File disimpan di Google Cloud Storage
+- File disimpan di Supabase Storage
 - URL foto tersimpan di database user
 - Validasi file (size, type, extension)
 - JWT authentication required
@@ -57,7 +57,7 @@ Dokumen ini menjelaskan implementasi lengkap fitur upload image profile pada Use
 ### Data Flow - Image Upload Process
 
 ```
-Client Request → HTTP Handler → Service → Storage (GCS) & Repository (DB)
+Client Request → HTTP Handler → Service → Storage (Supabase) & Repository (DB)
                                                              ↓
                                                 Image URL saved to user.photo
 ```
@@ -308,50 +308,71 @@ func NewConfig() *Config {
 }
 ```
 
-## 🔧 Google Cloud Storage Setup
+## 🔧 Supabase Storage Setup
 
 ### Prerequisites
-1. Google Cloud Project dengan billing enabled
-2. Cloud Storage API enabled
-3. Service account dengan Storage Admin role
-4. Credentials JSON file
+1. Supabase project account
+2. Supabase project dengan Storage enabled
+3. API key dari Supabase dashboard
+4. Bucket storage yang sudah dibuat
 
-### Setup Commands
-```bash
-# 1. Create project (if not exists)
-gcloud projects create your-project-id
+### Setup Steps
+1. **Login ke Supabase Dashboard**
+   - Buka https://supabase.com/dashboard
+   - Pilih project Anda
 
-# 2. Enable Cloud Storage API
-gcloud services enable storage.googleapis.com
+2. **Buat Storage Bucket**
+   - Pergi ke Storage section
+   - Klik "Create bucket"
+   - Beri nama bucket (contoh: `profile-images`)
+   - Set bucket menjadi public jika perlu
 
-# 3. Create service account
-gcloud iam service-accounts create profile-upload-sa \
-  --description="Service account for profile image uploads" \
-  --display-name="Profile Upload Service Account"
+3. **Dapatkan API Credentials**
+   - Pergi ke Settings > API
+   - Copy Project URL dan anon/service_role API key
 
-# 4. Grant Storage Admin role
-gcloud projects add-iam-policy-binding your-project-id \
-  --member="serviceAccount:profile-upload-sa@your-project-id.iam.gserviceaccount.com" \
-  --role="roles/storage.admin"
-
-# 5. Create credentials key
-gcloud iam service-accounts keys create credentials.json \
-  --iam-account=profile-upload-sa@your-project-id.iam.gserviceaccount.com
-
-# 6. Create bucket
-gsutil mb -p your-project-id -c standard gs://your-profile-bucket
-
-# 7. Set public access (optional - for direct image access)
-gsutil iam ch allUsers:objectViewer gs://your-profile-bucket
-```
+4. **Configure Bucket Policies** (jika perlu)
+   - Di Storage section, klik bucket
+   - Set policies untuk allow public read access
 
 ### Environment Variables
 ```env
-# Google Cloud Storage
-GOOGLE_CLOUD_PROJECT_ID=your-project-id
-GOOGLE_CLOUD_BUCKET_NAME=your-profile-bucket
-GOOGLE_CLOUD_CREDENTIALS_FILE=/path/to/credentials.json
+# Supabase Storage
+SUPABASE_PROJECT_URL=https://your-project-id.supabase.co
+SUPABASE_API_KEY=your-anon-or-service-role-key
+SUPABASE_BUCKET_NAME=profile-images
 ```
+
+### Bucket Configuration Recommendations
+
+Untuk fitur upload foto profile, konfigurasikan bucket Supabase sebagai berikut:
+
+#### ✅ **Public bucket: CENTANG**
+- **Alasan**: Kode menggunakan `/storage/v1/object/public/` untuk generate URL yang bisa diakses publik
+- **Dampak**: Foto profile bisa langsung diakses tanpa autentikasi tambahan
+
+#### ❌ **Restrict file size: JANGAN DICENTANG**
+- **Alasan**: Validasi ukuran file sudah ditangani di kode aplikasi (max 5MB)
+- **Keuntungan**: Lebih fleksibel, validasi tetap berfungsi di aplikasi
+
+#### ❌ **Restrict MIME types: JANGAN DICENTANG**
+- **Alasan**: Validasi tipe file sudah ditangani di kode aplikasi (hanya JPEG, PNG, GIF, WebP)
+- **Keuntungan**: Bucket tetap fleksibel untuk development/testing
+
+#### 📋 **Ringkasan Konfigurasi Bucket:**
+```bash
+Bucket Name: profile-images (atau nama yang Anda suka)
+✓ Public bucket
+✗ Restrict file size
+✗ Restrict MIME types
+```
+
+#### 🔒 **Keamanan Tetap Terjaga:**
+Meskipun bucket public, keamanan tetap terjamin karena:
+- Upload hanya bisa dilakukan lewat API dengan JWT token
+- Validasi file dilakukan di level aplikasi
+- File diberi nama unik dengan UUID
+- Hanya user yang login yang bisa upload
 
 ## 🧪 Testing Strategy
 
@@ -363,17 +384,17 @@ GOOGLE_CLOUD_CREDENTIALS_FILE=/path/to/credentials.json
 func TestAuthService_UploadProfileImage_Success(t *testing.T) {
     // Setup mocks
     mockStorage := &mocks.StorageInterface{}
-    mockStorage.On("UploadFile", ctx, "", "", mock.Anything, "image/jpeg").Return("https://storage.googleapis.com/bucket/image.jpg", nil)
+    mockStorage.On("UploadFile", ctx, "", "", mock.Anything, "image/jpeg").Return("https://your-project-id.supabase.co/storage/v1/object/public/bucket/image.jpg", nil)
 
     mockUserRepo := &mocks.UserRepository{}
-    mockUserRepo.On("UpdateUserPhoto", ctx, userID, "https://storage.googleapis.com/bucket/image.jpg").Return(nil)
+    mockUserRepo.On("UpdateUserPhoto", ctx, userID, "https://your-project-id.supabase.co/storage/v1/object/public/bucket/image.jpg").Return(nil)
 
     // Test upload
     authService := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
     imageURL, err := authService.UploadProfileImage(ctx, userID, fileReader, "image/jpeg", "test.jpg")
 
     assert.NoError(t, err)
-    assert.Equal(t, "https://storage.googleapis.com/bucket/image.jpg", imageURL)
+    assert.Equal(t, "https://your-project-id.supabase.co/storage/v1/object/public/bucket/image.jpg", imageURL)
     mockStorage.AssertExpectations(t)
     mockUserRepo.AssertExpectations(t)
 }
@@ -393,7 +414,7 @@ curl -X POST \
 # {
 #   "message": "Profile image uploaded successfully",
 #   "data": {
-#     "image_url": "https://storage.googleapis.com/bucket/profile-uuid.jpg"
+#     "image_url": "https://your-project-id.supabase.co/storage/v1/object/public/bucket/profile-uuid.jpg"
 #   }
 # }
 
@@ -451,7 +472,7 @@ Content-Type: multipart/form-data
 {
     "message": "Profile image uploaded successfully",
     "data": {
-        "image_url": "https://storage.googleapis.com/bucket/profile-uuid.jpg"
+        "image_url": "https://your-project-id.supabase.co/storage/v1/object/public/bucket/profile-uuid.jpg"
     }
 }
 ```
@@ -489,9 +510,9 @@ Content-Type: multipart/form-data
 ## 🚀 Deployment Checklist
 
 ### Pre-Deployment
-- [ ] Google Cloud Storage project created
-- [ ] Service account credentials generated
-- [ ] Bucket created and configured
+- [ ] Supabase project created
+- [ ] Storage bucket created and configured
+- [ ] API credentials obtained
 - [ ] Environment variables set
 - [ ] Database migration applied
 
@@ -504,7 +525,7 @@ Content-Type: multipart/form-data
 
 ### Monitoring Setup
 - Upload success/failure metrics
-- GCS storage usage monitoring
+- Supabase storage usage monitoring
 - File size distribution tracking
 - Error rate monitoring
 
@@ -534,7 +555,7 @@ type ImageProcessor interface {
 
 ### Current Implementation Status
 - ✅ Domain & Port design
-- ✅ GCS Storage integration
+- ✅ Supabase Storage integration
 - ✅ Repository updates
 - ✅ Service layer implementation
 - ✅ Handler implementation
@@ -542,10 +563,10 @@ type ImageProcessor interface {
 - ✅ Configuration setup
 - ⚠️ **UNIT TESTS PENDING**
 - ⚠️ **INTEGRATION TESTS PENDING**
-- ⚠️ **GCS SETUP VERIFICATION PENDING**
+- ⚠️ **SUPABASE SETUP VERIFICATION PENDING**
 
 ### Next Steps for Continuation
-1. **Setup GCS credentials and test connection**
+1. **Setup Supabase project and configure Storage**
 2. **Run unit tests and fix any issues**
 3. **Test API endpoints with Postman**
 4. **Verify file validation logic**

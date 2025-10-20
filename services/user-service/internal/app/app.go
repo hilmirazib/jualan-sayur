@@ -83,19 +83,19 @@ func RunServer() {
 	// Initialize message publishers
 	emailPublisher := message.NewEmailPublisher(app.RabbitMQChannel)
 
-	// Initialize storage (Google Cloud Storage)
-	gcsStorage, err := storage.NewGCSStorage(
-		cfg.GoogleCloud.ProjectID,
-		cfg.GoogleCloud.BucketName,
-		cfg.GoogleCloud.CredentialsFile,
+	// Initialize storage (Supabase Storage)
+	supabaseStorage, err := storage.NewSupabaseStorage(
+		cfg.Supabase.ProjectURL,
+		cfg.Supabase.APIKey,
+		cfg.Supabase.BucketName,
 	)
 	if err != nil {
-		log.Printf("⚠️  Google Cloud Storage not available: %v", err)
-		log.Printf("💡 Image upload will not work until GCS is configured")
-		gcsStorage = nil
+		log.Printf("⚠️  Supabase Storage not available: %v", err)
+		log.Printf("💡 Image upload will not work until Supabase is configured")
+		supabaseStorage = nil
 	}
 
-	app.UserService = service.NewUserService(app.UserRepo, sessionRepo, app.JWTUtil, verificationTokenRepo, emailPublisher, blacklistTokenRepo, gcsStorage, cfg)
+	app.UserService = service.NewUserService(app.UserRepo, sessionRepo, app.JWTUtil, verificationTokenRepo, emailPublisher, blacklistTokenRepo, supabaseStorage, cfg)
 
 	// Initialize handlers
 	userHandler := handler.NewUserHandler(app.UserService)
@@ -190,20 +190,20 @@ func NewApp(cfg *config.Config) (*App, error) {
 		emailPublisher = message.NewEmailPublisher(rabbitMQChannel)
 	}
 
-	// Initialize storage (Google Cloud Storage)
-	gcsStorage, err := storage.NewGCSStorage(
-		cfg.GoogleCloud.ProjectID,
-		cfg.GoogleCloud.BucketName,
-		cfg.GoogleCloud.CredentialsFile,
+	// Initialize storage (Supabase Storage)
+	supabaseStorage, err := storage.NewSupabaseStorage(
+		cfg.Supabase.ProjectURL,
+		cfg.Supabase.APIKey,
+		cfg.Supabase.BucketName,
 	)
 	if err != nil {
-		log.Printf("⚠️  Google Cloud Storage not available: %v", err)
-		log.Printf("💡 Image upload will not work until GCS is configured")
-		gcsStorage = nil
+		log.Printf("⚠️  Supabase Storage not available: %v", err)
+		log.Printf("💡 Image upload will not work until Supabase is configured")
+		supabaseStorage = nil
 	}
 
 	// Initialize services
-	userService := service.NewUserService(userRepo, sessionRepo, jwtUtil, nil, emailPublisher, blacklistTokenRepo, gcsStorage, cfg)
+	userService := service.NewUserService(userRepo, sessionRepo, jwtUtil, nil, emailPublisher, blacklistTokenRepo, supabaseStorage, cfg)
 
 	return &App{
 		UserService:     userService,

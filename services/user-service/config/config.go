@@ -20,18 +20,18 @@ type PsqlDB struct {
 	DBMaxIdle int    `json:"db_max_idle"`
 }
 
-type GoogleCloud struct {
-	ProjectID      string `json:"project_id"`
-	BucketName     string `json:"bucket_name"`
-	CredentialsFile string `json:"credentials_file"`
+type Supabase struct {
+	ProjectURL string `json:"project_url"`
+	APIKey     string `json:"api_key"`
+	BucketName string `json:"bucket_name"`
 }
 
 type Config struct {
-	App         App         `json:"app"`
-	PsqlDB      PsqlDB      `json:"psql_db"`
-	Redis       RedisConfig `json:"redis"`
-	RabbitMQ    RabbitMQ    `json:"rabbitmq"`
-	GoogleCloud GoogleCloud `json:"google_cloud"`
+	App      App      `json:"app"`
+	PsqlDB   PsqlDB   `json:"psql_db"`
+	Redis    RedisConfig `json:"redis"`
+	RabbitMQ RabbitMQ `json:"rabbitmq"`
+	Supabase Supabase `json:"supabase"`
 }
 
 func NewConfig() *Config {
@@ -70,10 +70,10 @@ func NewConfig() *Config {
 			Password: viper.GetString("RABBITMQ_PASSWORD"),
 			VHost:    viper.GetString("RABBITMQ_VHOST"),
 		},
-		GoogleCloud: GoogleCloud{
-			ProjectID:      viper.GetString("GOOGLE_CLOUD_PROJECT_ID"),
-			BucketName:     viper.GetString("GOOGLE_CLOUD_BUCKET_NAME"),
-			CredentialsFile: viper.GetString("GOOGLE_CLOUD_CREDENTIALS_FILE"),
+		Supabase: Supabase{
+			ProjectURL: viper.GetString("SUPABASE_PROJECT_URL"),
+			APIKey:     viper.GetString("SUPABASE_API_KEY"),
+			BucketName: viper.GetString("SUPABASE_BUCKET_NAME"),
 		},
 	}
 }

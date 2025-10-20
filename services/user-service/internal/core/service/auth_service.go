@@ -352,6 +352,8 @@ func (s *AuthService) GetProfile(ctx context.Context, userID int64) (*entity.Use
 }
 
 func (s *AuthService) UploadProfileImage(ctx context.Context, userID int64, file io.Reader, contentType, filename string) (string, error) {
+	log.Info().Int64("user_id", userID).Str("content_type", contentType).Str("filename", filename).Msg("[AuthService-UploadProfileImage] Starting image upload")
+
 	// Upload file to storage
 	imageURL, err := s.storage.UploadFile(ctx, "", "", file, contentType)
 	if err != nil {

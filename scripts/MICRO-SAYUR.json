@@ -1,0 +1,257 @@
+{
+  "v": 10,
+  "name": "MICRO-SAYUR",
+  "folders": [
+    {
+      "v": 10,
+      "name": "Authentication",
+      "folders": [],
+      "requests": [
+        {
+          "v": "16",
+          "name": "Signin",
+          "method": "POST",
+          "endpoint": "http://localhost:8082/api/v1/auth/signin",
+          "params": [],
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json",
+              "active": true,
+              "description": ""
+            }
+          ],
+          "preRequestScript": "",
+          "testScript": "",
+          "auth": {
+            "authType": "inherit",
+            "authActive": true
+          },
+          "body": {
+            "contentType": "application/json",
+            "body": "{\n  \"email\": \"hilmiyusuf197@gmail.com\",\n  \"password\": \"password123\"\n}"
+          },
+          "requestVariables": [],
+          "responses": {},
+          "_ref_id": "req_mgynaaah_aa688c47-8f10-4f57-ba9a-a50f8309e715"
+        },
+        {
+          "v": "16",
+          "name": "Signup",
+          "method": "POST",
+          "endpoint": "http://localhost:8082/api/v1/auth/signup",
+          "params": [],
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json",
+              "active": true,
+              "description": ""
+            }
+          ],
+          "preRequestScript": "",
+          "testScript": "",
+          "auth": {
+            "authType": "inherit",
+            "authActive": true
+          },
+          "body": {
+            "contentType": "application/json",
+            "body": "{\n  \"email\": \"newuser@example.com\",\n  \"name\": \"New User\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\"\n}"
+          },
+          "requestVariables": [],
+          "responses": {},
+          "_ref_id": "req_mgynaaah_aa688c47-8f10-4f57-ba9a-a50f8309e715"
+        },
+        {
+          "v": "16",
+          "name": "verify",
+          "method": "GET",
+          "endpoint": "http://localhost:8082/api/v1/auth/verify?token=c116c9fed1f9c28d77db8161fdc779f280ef3e25d6b7cfac9f27829e8a9a1890",
+          "params": [],
+          "headers": [],
+          "preRequestScript": "",
+          "testScript": "",
+          "auth": {
+            "authType": "inherit",
+            "authActive": true
+          },
+          "body": {
+            "contentType": null,
+            "body": null
+          },
+          "requestVariables": [],
+          "responses": {},
+          "_ref_id": "req_mgynl34q_5691df4d-36c6-4baf-957e-c37f12df917e"
+        },
+        {
+          "v": "16",
+          "name": "Reset Password",
+          "method": "POST",
+          "endpoint": "http://localhost:8082/api/v1/auth/reset-password",
+          "params": [],
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json",
+              "active": true,
+              "description": ""
+            }
+          ],
+          "preRequestScript": "",
+          "testScript": "",
+          "auth": {
+            "authType": "inherit",
+            "authActive": true
+          },
+          "body": {
+            "contentType": "application/json",
+            "body": "{\n  \"token\": \"1b1a0c0d5c25c4948caac89dee932ca8e81b82f62e6c8c89735ea568d6a4c7e7\",\n  \"password\": \"newpassword123\",\n  \"password_confirmation\": \"newpassword123\"\n}"
+          },
+          "requestVariables": [],
+          "responses": {},
+          "_ref_id": "req_mgynaaah_aa688c47-8f10-4f57-ba9a-a50f8309e715"
+        },
+        {
+          "v": "16",
+          "name": "Forgot Password",
+          "method": "POST",
+          "endpoint": "http://localhost:8082/api/v1/auth/forgot-password",
+          "params": [],
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json",
+              "active": true,
+              "description": ""
+            }
+          ],
+          "preRequestScript": "",
+          "testScript": "",
+          "auth": {
+            "authType": "inherit",
+            "authActive": true
+          },
+          "body": {
+            "contentType": "application/json",
+            "body": "{\n  \"email\": \"hilmiyusuf197@gmail.com\"\n}"
+          },
+          "requestVariables": [],
+          "responses": {},
+          "_ref_id": "req_mgynaaah_aa688c47-8f10-4f57-ba9a-a50f8309e715"
+        },
+        {
+          "v": "16",
+          "name": "profile",
+          "method": "GET",
+          "endpoint": "http://localhost:8082/api/v1/auth/profile",
+          "params": [],
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "",
+              "active": true,
+              "description": ""
+            }
+          ],
+          "preRequestScript": "",
+          "testScript": "",
+          "auth": {
+            "authType": "bearer",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo3LCJlbWFpbCI6ImhpbG1peXVzdWYxOTdAZ21haWwuY29tIiwicm9sZV9uYW1lIjoiQ3VzdG9tZXIiLCJzZXNzaW9uX2lkIjoic2Vzc18xNzYwOTM1MzMxMzk2MjQ2ODAwIiwiaXNzIjoic2VjcmV0Iiwic3ViIjoiaGlsbWl5dXN1ZjE5N0BnbWFpbC5jb20iLCJleHAiOjE3NjEwMjE3MzEsIm5iZiI6MTc2MDkzNTMzMSwiaWF0IjoxNzYwOTM1MzMxfQ.B2smuAmWaI41IlIknItxnEPiXDIq3Ga8xK2qu-ig7H4",
+            "authActive": true
+          },
+          "body": {
+            "contentType": null,
+            "body": null
+          },
+          "requestVariables": [],
+          "responses": {},
+          "_ref_id": "req_mgynvau0_bd707b34-47e5-44e3-be01-f0973412912f"
+        },
+        {
+          "v": "16",
+          "name": "Upload Profile Image",
+          "method": "POST",
+          "endpoint": "http://localhost:8082/api/v1/auth/profile/image-upload",
+          "params": [],
+          "headers": [],
+          "preRequestScript": "",
+          "testScript": "",
+          "auth": {
+            "authType": "bearer",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo3LCJlbWFpbCI6ImhpbG1peXVzdWYxOTdAZ21haWwuY29tIiwicm9sZV9uYW1lIjoiQ3VzdG9tZXIiLCJzZXNzaW9uX2lkIjoic2Vzc18xNzYwOTM1MzMxMzk2MjQ2ODAwIiwiaXNzIjoic2VjcmV0Iiwic3ViIjoiaGlsbWl5dXN1ZjE5N0BnbWFpbC5jb20iLCJleHAiOjE3NjEwMjE3MzEsIm5iZiI6MTc2MDkzNTMzMSwiaWF0IjoxNzYwOTM1MzMxfQ.B2smuAmWaI41IlIknItxnEPiXDIq3Ga8xK2qu-ig7H4",
+            "authActive": true
+          },
+          "body": {
+            "contentType": "multipart/form-data",
+            "body": [
+              {
+                "key": "photo",
+                "value": [],
+                "active": true,
+                "isFile": true,
+                "description": "Select image file (JPEG, PNG, GIF, WebP, max 5MB)"
+              }
+            ],
+            "isBulkEditing": false,
+            "showIndividualContentType": false
+          },
+          "requestVariables": [],
+          "responses": {},
+          "_ref_id": "req_upload_profile_image"
+        }
+      ],
+      "auth": {
+        "authType": "inherit",
+        "authActive": true
+      },
+      "headers": [],
+      "variables": [],
+      "_ref_id": "coll_mgynaaai_e917b12b-7b49-4c94-9583-ce82ac1a34b6"
+    },
+    {
+      "v": 10,
+      "name": "Admin",
+      "folders": [],
+      "requests": [
+        {
+          "v": "16",
+          "name": "Admin Check",
+          "method": "GET",
+          "endpoint": "http://localhost:8082/api/v1/admin/check",
+          "params": [],
+          "headers": [],
+          "preRequestScript": "",
+          "testScript": "",
+          "auth": {
+            "authType": "inherit",
+            "authActive": true
+          },
+          "body": {
+            "contentType": null,
+            "body": null
+          },
+          "requestVariables": [],
+          "responses": {},
+          "_ref_id": "req_mgynaaaj_dda03035-cb0c-440a-be9b-53e04e2a2f28"
+        }
+      ],
+      "auth": {
+        "authActive": true,
+        "authType": "inherit"
+      },
+      "headers": [],
+      "variables": [],
+      "_ref_id": "coll_mgynaaaj_994c7a98-6543-43f5-80f7-e1e69ec372a6"
+    }
+  ],
+  "requests": [],
+  "auth": {
+    "authType": "inherit",
+    "authActive": true
+  },
+  "headers": [],
+  "variables": [],
+  "_ref_id": "coll_mgynaaaj_fb26b75f-a8ea-472b-8b77-1bcb9eaf1cd9"
+}
