@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"user-service/config"
 	"user-service/internal/core/domain/entity"
@@ -185,4 +186,251 @@ func TestUserService_AdminCheck_Success(t *testing.T) {
 	mockUserRepo.AssertExpectations(t)
 	mockSessionRepo.AssertExpectations(t)
 	mockJWTUtil.AssertExpectations(t)
+}
+
+func TestAuthService_UploadProfileImage_Success_WithOldPhotoCleanup(t *testing.T) {
+	// Setup
+	mockUserRepo := new(MockUserRepository)
+	mockStorage := new(MockStorage)
+	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
+
+	ctx := context.Background()
+	userID := int64(1)
+	fileReader := strings.NewReader("fake image content")
+	contentType := "image/jpeg"
+	filename := "test.jpg"
+
+	oldPhotoURL := "https://test.supabase.co/storage/v1/object/public/profile-images/old-profile-uuid.jpg"
+	newPhotoURL := "https://test.supabase.co/storage/v1/object/public/profile-images/new-profile-uuid.jpg"
+
+	currentUser := &entity.UserEntity{
+		ID:    userID,
+		Photo: oldPhotoURL,
+	}
+
+	// Mock expectations
+	mockUserRepo.On("GetUserByID", ctx, userID).Return(currentUser, nil)
+	mockStorage.On("UploadFile", ctx, "", "", mock.Anything, contentType).Return(newPhotoURL, nil)
+	mockUserRepo.On("UpdateUserPhoto", ctx, userID, newPhotoURL).Return(nil)
+	mockStorage.On("DeleteFile", ctx, "", "old-profile-uuid.jpg").Return(nil)
+
+	// Execute
+	resultURL, err := service.UploadProfileImage(ctx, userID, fileReader, contentType, filename)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, newPhotoURL, resultURL)
+	mockUserRepo.AssertExpectations(t)
+	mockStorage.AssertExpectations(t)
+}
+
+func TestAuthService_UploadProfileImage_Success_NoExistingPhoto(t *testing.T) {
+	// Setup
+	mockUserRepo := new(MockUserRepository)
+	mockStorage := new(MockStorage)
+	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
+
+	ctx := context.Background()
+	userID := int64(1)
+	fileReader := strings.NewReader("fake image content")
+	contentType := "image/jpeg"
+	filename := "test.jpg"
+
+	newPhotoURL := "https://test.supabase.co/storage/v1/object/public/profile-images/new-profile-uuid.jpg"
+
+	currentUser := &entity.UserEntity{
+		ID:    userID,
+		Photo: "", // No existing photo
+	}
+
+	// Mock expectations
+	mockUserRepo.On("GetUserByID", ctx, userID).Return(currentUser, nil)
+	mockStorage.On("UploadFile", ctx, "", "", mock.Anything, contentType).Return(newPhotoURL, nil)
+	mockUserRepo.On("UpdateUserPhoto", ctx, userID, newPhotoURL).Return(nil)
+	// No delete call expected since no old photo
+
+	// Execute
+	resultURL, err := service.UploadProfileImage(ctx, userID, fileReader, contentType, filename)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, newPhotoURL, resultURL)
+	mockUserRepo.AssertExpectations(t)
+	mockStorage.AssertExpectations(t)
+	mockStorage.AssertNotCalled(t, "DeleteFile", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestAuthService_UploadProfileImage_UploadFailure(t *testing.T) {
+	// Setup
+	mockUserRepo := new(MockUserRepository)
+	mockStorage := new(MockStorage)
+	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
+
+	ctx := context.Background()
+	userID := int64(1)
+	fileReader := strings.NewReader("fake image content")
+	contentType := "image/jpeg"
+	filename := "test.jpg"
+
+	currentUser := &entity.UserEntity{
+		ID:    userID,
+		Photo: "",
+	}
+
+	// Mock expectations
+	mockUserRepo.On("GetUserByID", ctx, userID).Return(currentUser, nil)
+	mockStorage.On("UploadFile", ctx, "", "", mock.Anything, contentType).Return("", errors.New("upload failed"))
+
+	// Execute
+	resultURL, err := service.UploadProfileImage(ctx, userID, fileReader, contentType, filename)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Empty(t, resultURL)
+	assert.Equal(t, "failed to upload image", err.Error())
+	mockUserRepo.AssertExpectations(t)
+	mockStorage.AssertExpectations(t)
+	mockUserRepo.AssertNotCalled(t, "UpdateUserPhoto", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestAuthService_UploadProfileImage_DatabaseUpdateFailure(t *testing.T) {
+	// Setup
+	mockUserRepo := new(MockUserRepository)
+	mockStorage := new(MockStorage)
+	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
+
+	ctx := context.Background()
+	userID := int64(1)
+	fileReader := strings.NewReader("fake image content")
+	contentType := "image/jpeg"
+	filename := "test.jpg"
+
+	newPhotoURL := "https://test.supabase.co/storage/v1/object/public/profile-images/new-profile-uuid.jpg"
+
+	currentUser := &entity.UserEntity{
+		ID:    userID,
+		Photo: "",
+	}
+
+	// Mock expectations
+	mockUserRepo.On("GetUserByID", ctx, userID).Return(currentUser, nil)
+	mockStorage.On("UploadFile", ctx, "", "", mock.Anything, contentType).Return(newPhotoURL, nil)
+	mockUserRepo.On("UpdateUserPhoto", ctx, userID, newPhotoURL).Return(errors.New("database error"))
+	mockStorage.On("DeleteFile", ctx, "", "new-profile-uuid.jpg").Return(nil) // Cleanup of uploaded file
+
+	// Execute
+	resultURL, err := service.UploadProfileImage(ctx, userID, fileReader, contentType, filename)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Empty(t, resultURL)
+	assert.Equal(t, "failed to update profile", err.Error())
+	mockUserRepo.AssertExpectations(t)
+	mockStorage.AssertExpectations(t)
+}
+
+func TestAuthService_UploadProfileImage_OldPhotoDeletionFailure(t *testing.T) {
+	// Setup
+	mockUserRepo := new(MockUserRepository)
+	mockStorage := new(MockStorage)
+	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
+
+	ctx := context.Background()
+	userID := int64(1)
+	fileReader := strings.NewReader("fake image content")
+	contentType := "image/jpeg"
+	filename := "test.jpg"
+
+	oldPhotoURL := "https://test.supabase.co/storage/v1/object/public/profile-images/old-profile-uuid.jpg"
+	newPhotoURL := "https://test.supabase.co/storage/v1/object/public/profile-images/new-profile-uuid.jpg"
+
+	currentUser := &entity.UserEntity{
+		ID:    userID,
+		Photo: oldPhotoURL,
+	}
+
+	// Mock expectations
+	mockUserRepo.On("GetUserByID", ctx, userID).Return(currentUser, nil)
+	mockStorage.On("UploadFile", ctx, "", "", mock.Anything, contentType).Return(newPhotoURL, nil)
+	mockUserRepo.On("UpdateUserPhoto", ctx, userID, newPhotoURL).Return(nil)
+	mockStorage.On("DeleteFile", ctx, "", "old-profile-uuid.jpg").Return(errors.New("delete failed"))
+
+	// Execute
+	resultURL, err := service.UploadProfileImage(ctx, userID, fileReader, contentType, filename)
+
+	// Assert - Upload should still succeed even if old photo deletion fails
+	assert.NoError(t, err)
+	assert.Equal(t, newPhotoURL, resultURL)
+	mockUserRepo.AssertExpectations(t)
+	mockStorage.AssertExpectations(t)
+}
+
+func TestAuthService_UploadProfileImage_GetUserFailure(t *testing.T) {
+	// Setup
+	mockUserRepo := new(MockUserRepository)
+	mockStorage := new(MockStorage)
+	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
+
+	ctx := context.Background()
+	userID := int64(1)
+	fileReader := strings.NewReader("fake image content")
+	contentType := "image/jpeg"
+	filename := "test.jpg"
+
+	// Mock expectations
+	mockUserRepo.On("GetUserByID", ctx, userID).Return(nil, errors.New("user not found"))
+
+	// Execute
+	resultURL, err := service.UploadProfileImage(ctx, userID, fileReader, contentType, filename)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Empty(t, resultURL)
+	assert.Equal(t, "failed to get user data", err.Error())
+	mockUserRepo.AssertExpectations(t)
+	mockStorage.AssertNotCalled(t, "UploadFile", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestAuthService_ExtractObjectNameFromURL(t *testing.T) {
+	// Setup
+	service := &AuthService{}
+
+	tests := []struct {
+		name     string
+		url      string
+		expected string
+	}{
+		{
+			name:     "Valid Supabase URL",
+			url:      "https://test.supabase.co/storage/v1/object/public/profile-images/profile-uuid.jpg",
+			expected: "profile-uuid.jpg",
+		},
+		{
+			name:     "Valid URL with different bucket",
+			url:      "https://project.supabase.co/storage/v1/object/public/avatars/user-123.png",
+			expected: "user-123.png",
+		},
+		{
+			name:     "Invalid URL - missing storage path",
+			url:      "https://test.supabase.co/invalid/path",
+			expected: "",
+		},
+		{
+			name:     "Invalid URL - no object name",
+			url:      "https://test.supabase.co/storage/v1/object/public/bucket/",
+			expected: "",
+		},
+		{
+			name:     "Empty URL",
+			url:      "",
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := service.extractObjectNameFromURL(tt.url)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }
