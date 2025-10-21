@@ -26,6 +26,7 @@ type AuthServiceInterface interface {
 	Logout(ctx context.Context, userID int64, sessionID, tokenString string, tokenExpiresAt int64) error
 	GetProfile(ctx context.Context, userID int64) (*entity.UserEntity, error)
 	UploadProfileImage(ctx context.Context, userID int64, file io.Reader, contentType, filename string) (string, error)
+	UpdateProfile(ctx context.Context, userID int64, name, email, phone, address string, lat, lng float64, photo string) error
 }
 
 type AuthService struct {
@@ -397,6 +398,42 @@ func (s *AuthService) UploadProfileImage(ctx context.Context, userID int64, file
 
 	log.Info().Int64("user_id", userID).Str("image_url", imageURL).Msg("[AuthService-UploadProfileImage] Profile image uploaded successfully")
 	return imageURL, nil
+}
+
+func (s *AuthService) UpdateProfile(ctx context.Context, userID int64, name, email, phone, address string, lat, lng float64, photo string) error {
+	// Validate email format
+	if err := s.validateEmail(email); err != nil {
+		log.Error().Err(err).Str("email", email).Msg("[AuthService-UpdateProfile] Invalid email format")
+		return err
+	}
+
+	email = strings.ToLower(strings.TrimSpace(email))
+	name = strings.TrimSpace(name)
+	phone = strings.TrimSpace(phone)
+	address = strings.TrimSpace(address)
+
+	// Check if email is already used by another user
+	existingUser, err := s.userRepo.GetUserByEmailIncludingUnverified(ctx, email)
+	if err != nil && err.Error() != "record not found" {
+		log.Error().Err(err).Str("email", email).Msg("[AuthService-UpdateProfile] Failed to check email uniqueness")
+		return errors.New("failed to validate email")
+	}
+
+	// If email exists and it's not the current user, return error
+	if existingUser != nil && existingUser.ID != userID {
+		log.Warn().Str("email", email).Int64("existing_user_id", existingUser.ID).Int64("current_user_id", userID).Msg("[AuthService-UpdateProfile] Email already exists")
+		return errors.New("email already exists")
+	}
+
+	// Update user profile
+	err = s.userRepo.UpdateUserProfile(ctx, userID, name, email, phone, address, lat, lng, photo)
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Str("email", email).Msg("[AuthService-UpdateProfile] Failed to update user profile")
+		return errors.New("failed to update profile")
+	}
+
+	log.Info().Int64("user_id", userID).Str("email", email).Msg("[AuthService-UpdateProfile] User profile updated successfully")
+	return nil
 }
 
 func (s *AuthService) generateVerificationToken() (string, error) {

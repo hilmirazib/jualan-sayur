@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"strconv"
 	"user-service/internal/core/domain/entity"
 	"user-service/internal/core/domain/model"
 	"user-service/internal/core/port"
@@ -34,6 +35,13 @@ func (u *UserRepository) GetUserByEmail(ctx context.Context, email string) (*ent
 		roleName = "user" // Default role
 	}
 
+	// Parse lat/lng from string to float64
+	lat, lng, err := u.parseLatLng(modelUser.Lat, modelUser.Lng)
+	if err != nil {
+		log.Error().Err(err).Str("lat", modelUser.Lat).Str("lng", modelUser.Lng).Msg("[UserRepository-GetUserByEmail] Failed to parse lat/lng")
+		return nil, err
+	}
+
 	return &entity.UserEntity{
 		ID:         modelUser.ID,
 		Name:       modelUser.Name,
@@ -41,8 +49,8 @@ func (u *UserRepository) GetUserByEmail(ctx context.Context, email string) (*ent
 		Password:   modelUser.Password,
 		RoleName:   roleName,
 		Address:    modelUser.Address,
-		Lat:        modelUser.Lat,
-		Lng:        modelUser.Lng,
+		Lat:        lat,
+		Lng:        lng,
 		Phone:      modelUser.Phone,
 		Photo:      modelUser.Photo,
 		IsVerified: modelUser.IsVerified,
@@ -50,13 +58,16 @@ func (u *UserRepository) GetUserByEmail(ctx context.Context, email string) (*ent
 }
 
 func (u *UserRepository) CreateUser(ctx context.Context, user *entity.UserEntity) (*entity.UserEntity, error) {
+	// Format lat/lng from float64 to string for database
+	latStr, lngStr := u.formatLatLng(user.Lat, user.Lng)
+
 	modelUser := &model.User{
 		Name:       user.Name,
 		Email:      user.Email,
 		Password:   user.Password,
 		Address:    user.Address,
-		Lat:        user.Lat,
-		Lng:        user.Lng,
+		Lat:        latStr,
+		Lng:        lngStr,
 		Phone:      user.Phone,
 		Photo:      user.Photo,
 		IsVerified: user.IsVerified,
@@ -79,6 +90,13 @@ func (u *UserRepository) CreateUser(ctx context.Context, user *entity.UserEntity
 		return nil, err
 	}
 
+	// Parse lat/lng back to float64 for entity
+	lat, lng, err := u.parseLatLng(modelUser.Lat, modelUser.Lng)
+	if err != nil {
+		log.Error().Err(err).Str("lat", modelUser.Lat).Str("lng", modelUser.Lng).Msg("[UserRepository-CreateUser] Failed to parse lat/lng")
+		return nil, err
+	}
+
 	return &entity.UserEntity{
 		ID:         modelUser.ID,
 		Name:       modelUser.Name,
@@ -86,8 +104,8 @@ func (u *UserRepository) CreateUser(ctx context.Context, user *entity.UserEntity
 		Password:   modelUser.Password,
 		RoleName:   customerRole.Name,
 		Address:    modelUser.Address,
-		Lat:        modelUser.Lat,
-		Lng:        modelUser.Lng,
+		Lat:        lat,
+		Lng:        lng,
 		Phone:      modelUser.Phone,
 		Photo:      modelUser.Photo,
 		IsVerified: modelUser.IsVerified,
@@ -143,6 +161,13 @@ func (u *UserRepository) GetUserByID(ctx context.Context, userID int64) (*entity
 		roleName = "user" // Default role
 	}
 
+	// Parse lat/lng from string to float64
+	lat, lng, err := u.parseLatLng(modelUser.Lat, modelUser.Lng)
+	if err != nil {
+		log.Error().Err(err).Str("lat", modelUser.Lat).Str("lng", modelUser.Lng).Msg("[UserRepository-GetUserByID] Failed to parse lat/lng")
+		return nil, err
+	}
+
 	return &entity.UserEntity{
 		ID:         modelUser.ID,
 		Name:       modelUser.Name,
@@ -150,8 +175,8 @@ func (u *UserRepository) GetUserByID(ctx context.Context, userID int64) (*entity
 		Password:   modelUser.Password,
 		RoleName:   roleName,
 		Address:    modelUser.Address,
-		Lat:        modelUser.Lat,
-		Lng:        modelUser.Lng,
+		Lat:        lat,
+		Lng:        lng,
 		Phone:      modelUser.Phone,
 		Photo:      modelUser.Photo,
 		IsVerified: modelUser.IsVerified,
@@ -177,6 +202,13 @@ func (u *UserRepository) GetUserByEmailIncludingUnverified(ctx context.Context, 
 		roleName = "user" // Default role
 	}
 
+	// Parse lat/lng from string to float64
+	lat, lng, err := u.parseLatLng(modelUser.Lat, modelUser.Lng)
+	if err != nil {
+		log.Error().Err(err).Str("lat", modelUser.Lat).Str("lng", modelUser.Lng).Msg("[UserRepository-GetUserByEmailIncludingUnverified] Failed to parse lat/lng")
+		return nil, err
+	}
+
 	return &entity.UserEntity{
 		ID:         modelUser.ID,
 		Name:       modelUser.Name,
@@ -184,8 +216,8 @@ func (u *UserRepository) GetUserByEmailIncludingUnverified(ctx context.Context, 
 		Password:   modelUser.Password,
 		RoleName:   roleName,
 		Address:    modelUser.Address,
-		Lat:        modelUser.Lat,
-		Lng:        modelUser.Lng,
+		Lat:        lat,
+		Lng:        lng,
 		Phone:      modelUser.Phone,
 		Photo:      modelUser.Photo,
 		IsVerified: modelUser.IsVerified,
@@ -210,6 +242,46 @@ func (u *UserRepository) UpdateUserPhoto(ctx context.Context, userID int64, phot
 
 	log.Info().Int64("user_id", userID).Str("photo_url", photoURL).Msg("[UserRepository-UpdateUserPhoto] User photo updated successfully")
 	return nil
+}
+
+func (u *UserRepository) UpdateUserProfile(ctx context.Context, userID int64, name, email, phone, address string, lat, lng float64, photo string) error {
+	// Format lat/lng from float64 to string for database
+	latStr, lngStr := u.formatLatLng(lat, lng)
+
+	updates := map[string]interface{}{
+		"name":    name,
+		"email":   email,
+		"phone":   phone,
+		"address": address,
+		"lat":     latStr,
+		"lng":     lngStr,
+		"photo":   photo,
+	}
+
+	if err := u.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", userID).Updates(updates).Error; err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Str("email", email).Msg("[UserRepository-UpdateUserProfile] Failed to update user profile")
+		return err
+	}
+
+	log.Info().Int64("user_id", userID).Str("email", email).Msg("[UserRepository-UpdateUserProfile] User profile updated successfully")
+	return nil
+}
+
+// Helper functions for lat/lng conversion
+func (u *UserRepository) parseLatLng(latStr, lngStr string) (float64, float64, error) {
+	lat, err := strconv.ParseFloat(latStr, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+	lng, err := strconv.ParseFloat(lngStr, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+	return lat, lng, nil
+}
+
+func (u *UserRepository) formatLatLng(lat, lng float64) (string, string) {
+	return strconv.FormatFloat(lat, 'f', -1, 64), strconv.FormatFloat(lng, 'f', -1, 64)
 }
 
 func NewUserRepository(db *gorm.DB) port.UserRepositoryInterface {

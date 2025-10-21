@@ -108,6 +108,7 @@ func RunServer() {
 	public.POST("/auth/forgot-password", userHandler.ForgotPassword)
 	public.POST("/auth/reset-password", userHandler.ResetPassword)
 	public.GET("/auth/profile", userHandler.Profile, middleware.JWTMiddleware(cfg, sessionRepo, blacklistTokenRepo))
+	public.PUT("/auth/profile", userHandler.UpdateProfile, middleware.JWTMiddleware(cfg, sessionRepo, blacklistTokenRepo))
 	public.POST("/auth/profile/image-upload", userHandler.ImageUploadProfile, middleware.JWTMiddleware(cfg, sessionRepo, blacklistTokenRepo))
 
 	admin := e.Group("/api/v1/admin", middleware.JWTMiddleware(cfg, sessionRepo, blacklistTokenRepo))

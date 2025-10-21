@@ -14,4 +14,5 @@ type UserRepositoryInterface interface {
 	UpdateUserVerificationStatus(ctx context.Context, userID int64, isVerified bool) error
 	UpdateUserPassword(ctx context.Context, userID int64, hashedPassword string) error
 	UpdateUserPhoto(ctx context.Context, userID int64, photoURL string) error
+	UpdateUserProfile(ctx context.Context, userID int64, name, email, phone, address string, lat, lng float64, photo string) error
 }

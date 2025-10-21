@@ -26,8 +26,8 @@ func TestUserService_GetProfile_Success(t *testing.T) {
 		RoleName: "Customer",
 		Phone:    "08123456789",
 		Address:  "Jl. Test No. 123",
-		Lat:      "-6.2088",
-		Lng:      "106.8456",
+		Lat:      -6.2088,
+		Lng:      106.8456,
 		Photo:    "https://example.com/photo.jpg",
 	}
 

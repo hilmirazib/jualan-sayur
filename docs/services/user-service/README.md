@@ -9,7 +9,10 @@ User Service adalah microservice yang menangani semua operasi terkait manajemen 
 - **User Registration**: Pendaftaran user baru dengan email verification
 - **User Authentication**: Login dengan JWT token
 - **User Authorization**: Role-based access control (RBAC)
-- **Profile Management**: Update profil user
+- **Profile Management**:
+  - Get user profile data
+  - Update user profile data (name, email, phone, address, location, photo)
+  - Upload profile image
 - **Email Verification**: Verifikasi email untuk aktivasi akun
 - **Password Reset**: Forgot password dengan email reset link
 - **Session Management**: Manajemen session dengan Redis
@@ -51,8 +54,9 @@ POST   /api/v1/auth/reset-password    # Reset password with token
 
 ### User Management
 ```
-GET    /api/v1/users/profile          # Get user profile
-PUT    /api/v1/users/profile          # Update user profile
+GET    /api/v1/auth/profile           # Get user profile
+PUT    /api/v1/auth/profile           # Update user profile
+POST   /api/v1/auth/profile/image-upload  # Upload profile image
 GET    /api/v1/users/:id              # Get user by ID (admin)
 PUT    /api/v1/users/:id              # Update user (admin)
 DELETE /api/v1/users/:id              # Delete user (admin)

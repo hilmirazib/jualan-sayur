@@ -26,6 +26,7 @@ type AuthHandlerInterface interface {
 	Logout(ctx echo.Context) error
 	Profile(ctx echo.Context) error
 	ImageUploadProfile(ctx echo.Context) error
+	UpdateProfile(ctx echo.Context) error
 }
 
 type AuthHandler struct {
@@ -533,6 +534,108 @@ func (a *AuthHandler) ImageUploadProfile(c echo.Context) error {
 	resp.Data = imageResp
 
 	log.Info().Int64("user_id", userID).Str("image_url", imageURL).Msg("[AuthHandler-ImageUploadProfile] Profile image uploaded successfully")
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+func (a *AuthHandler) UpdateProfile(c echo.Context) error {
+	var (
+		req  = request.UpdateProfileRequest{}
+		resp = response.DefaultResponse{}
+		ctx  = c.Request().Context()
+	)
+
+	userID := c.Get("user_id").(int64)
+
+	if err := c.Bind(&req); err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Msg("[AuthHandler-UpdateProfile] Failed to bind request")
+		resp.Message = "Invalid request format"
+		return c.JSON(http.StatusBadRequest, resp)
+	}
+
+	if err := a.validator.Validate(&req); err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Msg("[AuthHandler-UpdateProfile] Validation failed")
+
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			for _, fieldError := range validationErrors {
+				fieldName := fieldError.Field()
+				tag := fieldError.Tag()
+
+				switch fieldName {
+				case "Email":
+					if tag == "email" {
+						resp.Message = "Invalid email format"
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+					if tag == "required" {
+						resp.Message = "Email is required"
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+				case "Name":
+					if tag == "required" {
+						resp.Message = "Name is required"
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+					if tag == "min" {
+						resp.Message = "Name must be at least 2 characters long"
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+					if tag == "max" {
+						resp.Message = "Name must not exceed 100 characters"
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+				case "Phone":
+					if tag == "required" {
+						resp.Message = "Phone is required"
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+				case "Address":
+					if tag == "required" {
+						resp.Message = "Address is required"
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+				case "Lat":
+					if tag == "required" {
+						resp.Message = "Latitude is required"
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+				case "Lng":
+					if tag == "required" {
+						resp.Message = "Longitude is required"
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+				case "Photo":
+					if tag == "required" {
+						resp.Message = "Photo is required"
+						return c.JSON(http.StatusUnprocessableEntity, resp)
+					}
+				}
+			}
+		}
+
+		resp.Message = "Validation failed"
+		return c.JSON(http.StatusUnprocessableEntity, resp)
+	}
+
+	err := a.userService.UpdateProfile(ctx, userID, req.Name, req.Email, req.Phone, req.Address, req.Lat, req.Lng, req.Photo)
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Str("email", req.Email).Msg("[AuthHandler-UpdateProfile] Profile update failed")
+
+		switch err.Error() {
+		case "email already exists":
+			resp.Message = "Email already exists"
+			return c.JSON(http.StatusUnprocessableEntity, resp)
+		case "failed to update profile":
+			resp.Message = "Failed to update profile"
+			return c.JSON(http.StatusInternalServerError, resp)
+		default:
+			resp.Message = "Internal server error"
+			return c.JSON(http.StatusInternalServerError, resp)
+		}
+	}
+
+	resp.Message = "Profile updated successfully"
+	log.Info().Int64("user_id", userID).Str("email", req.Email).Msg("[AuthHandler-UpdateProfile] User profile updated successfully")
 
 	return c.JSON(http.StatusOK, resp)
 }

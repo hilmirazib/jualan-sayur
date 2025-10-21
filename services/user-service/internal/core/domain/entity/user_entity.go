@@ -7,8 +7,8 @@ type UserEntity struct {
 	Password   string
 	RoleName   string
 	Address    string
-	Lat        string
-	Lng        string
+	Lat        float64
+	Lng        float64
 	Phone      string
 	Photo      string
 	IsVerified bool

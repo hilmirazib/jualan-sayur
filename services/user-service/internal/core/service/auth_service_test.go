@@ -434,3 +434,192 @@ func TestAuthService_ExtractObjectNameFromURL(t *testing.T) {
 		})
 	}
 }
+
+func TestAuthService_UpdateProfile_Success(t *testing.T) {
+	// Setup
+	mockUserRepo := new(MockUserRepository)
+	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
+
+	ctx := context.Background()
+	userID := int64(1)
+	name := "John Doe Updated"
+	email := "newemail@example.com"
+	phone := "081234567890"
+	address := "Jl. Sudirman No. 123, Jakarta"
+	lat := -6.2088
+	lng := 106.8456
+	photo := "https://example.com/new-photo.jpg"
+
+	// Mock expectations - email check returns not found (email available)
+	mockUserRepo.On("GetUserByEmailIncludingUnverified", ctx, email).Return(nil, errors.New("record not found"))
+	mockUserRepo.On("UpdateUserProfile", ctx, userID, name, email, phone, address, lat, lng, photo).Return(nil)
+
+	// Execute
+	err := service.UpdateProfile(ctx, userID, name, email, phone, address, lat, lng, photo)
+
+	// Assert
+	assert.NoError(t, err)
+	mockUserRepo.AssertExpectations(t)
+}
+
+func TestAuthService_UpdateProfile_EmailAlreadyExists(t *testing.T) {
+	// Setup
+	mockUserRepo := new(MockUserRepository)
+	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
+
+	ctx := context.Background()
+	userID := int64(1)
+	name := "John Doe"
+	email := "existing@example.com"
+	phone := "08123456789"
+	address := "Jakarta"
+	lat := -6.2088
+	lng := 106.8456
+	photo := "https://example.com/photo.jpg"
+
+	// Mock expectations - email already exists for different user
+	existingUser := &entity.UserEntity{ID: 2, Email: email}
+	mockUserRepo.On("GetUserByEmailIncludingUnverified", ctx, email).Return(existingUser, nil)
+
+	// Execute
+	err := service.UpdateProfile(ctx, userID, name, email, phone, address, lat, lng, photo)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Equal(t, "email already exists", err.Error())
+	mockUserRepo.AssertExpectations(t)
+	mockUserRepo.AssertNotCalled(t, "UpdateUserProfile", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestAuthService_UpdateProfile_SameUserEmail(t *testing.T) {
+	// Setup
+	mockUserRepo := new(MockUserRepository)
+	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
+
+	ctx := context.Background()
+	userID := int64(1)
+	name := "John Doe Updated"
+	email := "sameuser@example.com"
+	phone := "081234567890"
+	address := "Jl. Sudirman No. 123, Jakarta"
+	lat := -6.2088
+	lng := 106.8456
+	photo := "https://example.com/new-photo.jpg"
+
+	// Mock expectations - email exists but belongs to same user (allowed)
+	existingUser := &entity.UserEntity{ID: userID, Email: email}
+	mockUserRepo.On("GetUserByEmailIncludingUnverified", ctx, email).Return(existingUser, nil)
+	mockUserRepo.On("UpdateUserProfile", ctx, userID, name, email, phone, address, lat, lng, photo).Return(nil)
+
+	// Execute
+	err := service.UpdateProfile(ctx, userID, name, email, phone, address, lat, lng, photo)
+
+	// Assert
+	assert.NoError(t, err)
+	mockUserRepo.AssertExpectations(t)
+}
+
+func TestAuthService_UpdateProfile_InvalidEmail(t *testing.T) {
+	// Setup
+	mockUserRepo := new(MockUserRepository)
+	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
+
+	ctx := context.Background()
+	userID := int64(1)
+	name := "John Doe"
+	email := "invalid-email-format"
+	phone := "08123456789"
+	address := "Jakarta"
+	lat := -6.2088
+	lng := 106.8456
+	photo := "https://example.com/photo.jpg"
+
+	// Execute - should fail email validation before calling repository
+	err := service.UpdateProfile(ctx, userID, name, email, phone, address, lat, lng, photo)
+
+	// Assert
+	assert.Error(t, err)
+	// Email validation error should be returned
+	mockUserRepo.AssertNotCalled(t, "GetUserByEmailIncludingUnverified", mock.Anything, mock.Anything)
+	mockUserRepo.AssertNotCalled(t, "UpdateUserProfile", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestAuthService_UpdateProfile_EmptyEmail(t *testing.T) {
+	// Setup
+	mockUserRepo := new(MockUserRepository)
+	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
+
+	ctx := context.Background()
+	userID := int64(1)
+	name := "John Doe"
+	email := "" // Empty email
+	phone := "08123456789"
+	address := "Jakarta"
+	lat := -6.2088
+	lng := 106.8456
+	photo := "https://example.com/photo.jpg"
+
+	// Execute - should fail email validation
+	err := service.UpdateProfile(ctx, userID, name, email, phone, address, lat, lng, photo)
+
+	// Assert
+	assert.Error(t, err)
+	mockUserRepo.AssertNotCalled(t, "GetUserByEmailIncludingUnverified", mock.Anything, mock.Anything)
+	mockUserRepo.AssertNotCalled(t, "UpdateUserProfile", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestAuthService_UpdateProfile_DatabaseError(t *testing.T) {
+	// Setup
+	mockUserRepo := new(MockUserRepository)
+	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
+
+	ctx := context.Background()
+	userID := int64(1)
+	name := "John Doe Updated"
+	email := "newemail@example.com"
+	phone := "081234567890"
+	address := "Jl. Sudirman No. 123, Jakarta"
+	lat := -6.2088
+	lng := 106.8456
+	photo := "https://example.com/new-photo.jpg"
+
+	// Mock expectations
+	mockUserRepo.On("GetUserByEmailIncludingUnverified", ctx, email).Return(nil, errors.New("record not found"))
+	mockUserRepo.On("UpdateUserProfile", ctx, userID, name, email, phone, address, lat, lng, photo).Return(errors.New("database connection failed"))
+
+	// Execute
+	err := service.UpdateProfile(ctx, userID, name, email, phone, address, lat, lng, photo)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Equal(t, "failed to update profile", err.Error())
+	mockUserRepo.AssertExpectations(t)
+}
+
+func TestAuthService_UpdateProfile_EmailCheckError(t *testing.T) {
+	// Setup
+	mockUserRepo := new(MockUserRepository)
+	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
+
+	ctx := context.Background()
+	userID := int64(1)
+	name := "John Doe Updated"
+	email := "newemail@example.com"
+	phone := "081234567890"
+	address := "Jl. Sudirman No. 123, Jakarta"
+	lat := -6.2088
+	lng := 106.8456
+	photo := "https://example.com/new-photo.jpg"
+
+	// Mock expectations - email check fails with unexpected error
+	mockUserRepo.On("GetUserByEmailIncludingUnverified", ctx, email).Return(nil, errors.New("database connection error"))
+
+	// Execute
+	err := service.UpdateProfile(ctx, userID, name, email, phone, address, lat, lng, photo)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Equal(t, "failed to validate email", err.Error())
+	mockUserRepo.AssertExpectations(t)
+	mockUserRepo.AssertNotCalled(t, "UpdateUserProfile", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}

@@ -69,6 +69,11 @@ func (m *MockUserRepository) UpdateUserPhoto(ctx context.Context, userID int64, 
 	return args.Error(0)
 }
 
+func (m *MockUserRepository) UpdateUserProfile(ctx context.Context, userID int64, name, email, phone, address string, lat, lng float64, photo string) error {
+	args := m.Called(ctx, userID, name, email, phone, address, lat, lng, photo)
+	return args.Error(0)
+}
+
 // MockSessionRepository mocks the session repository
 type MockSessionRepository struct {
 	mock.Mock

@@ -15,4 +15,5 @@ type UserServiceInterface interface {
 	Logout(ctx context.Context, userID int64, sessionID, tokenString string, tokenExpiresAt int64) error
 	GetProfile(ctx context.Context, userID int64) (*entity.UserEntity, error)
 	UploadProfileImage(ctx context.Context, userID int64, file io.Reader, contentType, filename string) (string, error)
+	UpdateProfile(ctx context.Context, userID int64, name, email, phone, address string, lat, lng float64, photo string) error
 }
