@@ -21,6 +21,7 @@ type AuthServiceInterface interface {
 	SignIn(ctx context.Context, req entity.UserEntity) (*entity.UserEntity, string, error)
 	CreateUserAccount(ctx context.Context, email, name, password, passwordConfirmation string) error
 	VerifyUserAccount(ctx context.Context, token string) error
+	VerifyEmailChange(ctx context.Context, token string) error
 	ForgotPassword(ctx context.Context, email string) error
 	ResetPassword(ctx context.Context, token, newPassword, passwordConfirmation string) error
 	Logout(ctx context.Context, userID int64, sessionID, tokenString string, tokenExpiresAt int64) error
@@ -182,6 +183,50 @@ func (s *AuthService) VerifyUserAccount(ctx context.Context, token string) error
 	}
 
 	log.Info().Int64("user_id", verificationToken.UserID).Str("token", token).Msg("[AuthService-VerifyUserAccount] User account verified successfully")
+	return nil
+}
+
+func (s *AuthService) VerifyEmailChange(ctx context.Context, token string) error {
+	verificationToken, err := s.verificationTokenRepo.GetVerificationToken(ctx, token)
+	if err != nil {
+		if err.Error() == "record not found" {
+			log.Warn().Str("token", token).Msg("[AuthService-VerifyEmailChange] Verification token not found or expired")
+			return errors.New("invalid or expired verification token")
+		}
+		log.Error().Err(err).Str("token", token).Msg("[AuthService-VerifyEmailChange] Failed to get verification token")
+		return errors.New("failed to verify token")
+	}
+
+	if verificationToken.TokenType != "email_change" {
+		log.Warn().Str("token", token).Str("token_type", verificationToken.TokenType).Msg("[AuthService-VerifyEmailChange] Token is not for email change")
+		return errors.New("invalid token type")
+	}
+
+	if verificationToken.NewEmail == "" {
+		log.Error().Str("token", token).Msg("[AuthService-VerifyEmailChange] No new email found in token")
+		return errors.New("invalid token data")
+	}
+
+	// Update user email to the new email
+	err = s.userRepo.UpdateUserEmail(ctx, verificationToken.UserID, verificationToken.NewEmail)
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", verificationToken.UserID).Str("new_email", verificationToken.NewEmail).Msg("[AuthService-VerifyEmailChange] Failed to update user email")
+		return errors.New("failed to update email")
+	}
+
+	// Mark user as verified
+	err = s.userRepo.UpdateUserVerificationStatus(ctx, verificationToken.UserID, true)
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", verificationToken.UserID).Msg("[AuthService-VerifyEmailChange] Failed to update user verification status")
+		return errors.New("failed to verify email change")
+	}
+
+	err = s.verificationTokenRepo.DeleteVerificationToken(ctx, token)
+	if err != nil {
+		log.Error().Err(err).Str("token", token).Msg("[AuthService-VerifyEmailChange] Failed to delete verification token")
+	}
+
+	log.Info().Int64("user_id", verificationToken.UserID).Str("new_email", verificationToken.NewEmail).Str("token", token).Msg("[AuthService-VerifyEmailChange] Email change verified successfully")
 	return nil
 }
 
@@ -412,27 +457,107 @@ func (s *AuthService) UpdateProfile(ctx context.Context, userID int64, name, ema
 	phone = strings.TrimSpace(phone)
 	address = strings.TrimSpace(address)
 
+	// Get current user to check if email changed
+	currentUser, err := s.userRepo.GetUserByID(ctx, userID)
+	if err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Msg("[AuthService-UpdateProfile] Failed to get current user")
+		if err.Error() == "record not found" {
+			return errors.New("user not found")
+		}
+		return errors.New("failed to get user data")
+	}
+
+	emailChanged := currentUser.Email != email
+
 	// Check if email is already used by another user
-	existingUser, err := s.userRepo.GetUserByEmailIncludingUnverified(ctx, email)
-	if err != nil && err.Error() != "record not found" {
-		log.Error().Err(err).Str("email", email).Msg("[AuthService-UpdateProfile] Failed to check email uniqueness")
-		return errors.New("failed to validate email")
+	if emailChanged {
+		existingUser, err := s.userRepo.GetUserByEmailIncludingUnverified(ctx, email)
+		if err != nil && err.Error() != "record not found" {
+			log.Error().Err(err).Str("email", email).Msg("[AuthService-UpdateProfile] Failed to check email uniqueness")
+			return errors.New("failed to validate email")
+		}
+
+		// If email exists and it's not the current user, return error
+		if existingUser != nil && existingUser.ID != userID {
+			log.Warn().Str("email", email).Int64("existing_user_id", existingUser.ID).Int64("current_user_id", userID).Msg("[AuthService-UpdateProfile] Email already exists")
+			return errors.New("email already exists")
+		}
 	}
 
-	// If email exists and it's not the current user, return error
-	if existingUser != nil && existingUser.ID != userID {
-		log.Warn().Str("email", email).Int64("existing_user_id", existingUser.ID).Int64("current_user_id", userID).Msg("[AuthService-UpdateProfile] Email already exists")
-		return errors.New("email already exists")
+	// Handle photo cleanup if photo URL changed
+	if currentUser.Photo != "" && currentUser.Photo != photo {
+		oldObjectName := s.extractObjectNameFromURL(currentUser.Photo)
+		if oldObjectName != "" {
+			if deleteErr := s.storage.DeleteFile(ctx, "", oldObjectName); deleteErr != nil {
+				log.Warn().Err(deleteErr).Str("old_photo_url", currentUser.Photo).Msg("[AuthService-UpdateProfile] Failed to delete old photo from storage")
+				// Don't fail the update if old photo deletion fails
+			} else {
+				log.Info().Int64("user_id", userID).Str("old_photo_url", currentUser.Photo).Msg("[AuthService-UpdateProfile] Old photo deleted successfully")
+			}
+		}
 	}
 
-	// Update user profile
-	err = s.userRepo.UpdateUserProfile(ctx, userID, name, email, phone, address, lat, lng, photo)
+	// If email changed, we need to send verification
+	if emailChanged {
+		// Generate verification token for new email
+		token, err := s.generateVerificationToken()
+		if err != nil {
+			log.Error().Err(err).Int64("user_id", userID).Msg("[AuthService-UpdateProfile] Failed to generate verification token")
+			return errors.New("failed to generate verification token")
+		}
+
+		// Create verification token
+		verificationToken := &entity.VerificationTokenEntity{
+			UserID:    userID,
+			Token:     token,
+			TokenType: "email_change",
+			NewEmail:  email,
+			ExpiresAt: time.Now().Add(24 * time.Hour),
+		}
+
+		err = s.verificationTokenRepo.CreateVerificationToken(ctx, verificationToken)
+		if err != nil {
+			log.Error().Err(err).Int64("user_id", userID).Msg("[AuthService-UpdateProfile] Failed to create verification token")
+			return errors.New("failed to create verification token")
+		}
+
+		// Send verification email to new email
+		err = s.emailPublisher.SendVerificationEmail(ctx, email, token)
+		if err != nil {
+			log.Error().Err(err).Int64("user_id", userID).Str("email", email).Msg("[AuthService-UpdateProfile] Failed to send verification email")
+			// Don't fail the update, but log the error
+			log.Warn().Int64("user_id", userID).Msg("[AuthService-UpdateProfile] Profile updated but verification email failed to send")
+		}
+
+		// Set user as unverified since email changed
+		err = s.userRepo.UpdateUserVerificationStatus(ctx, userID, false)
+		if err != nil {
+			log.Error().Err(err).Int64("user_id", userID).Msg("[AuthService-UpdateProfile] Failed to update verification status")
+			return errors.New("failed to update verification status")
+		}
+
+		log.Info().Int64("user_id", userID).Str("new_email", email).Msg("[AuthService-UpdateProfile] Email change initiated, verification email sent")
+	}
+
+	// Update user profile (excluding email if it changed - will be updated after verification)
+	updateEmail := email
+	if emailChanged {
+		// Keep old email until verified
+		updateEmail = currentUser.Email
+	}
+
+	err = s.userRepo.UpdateUserProfile(ctx, userID, name, updateEmail, phone, address, lat, lng, photo)
 	if err != nil {
 		log.Error().Err(err).Int64("user_id", userID).Str("email", email).Msg("[AuthService-UpdateProfile] Failed to update user profile")
 		return errors.New("failed to update profile")
 	}
 
-	log.Info().Int64("user_id", userID).Str("email", email).Msg("[AuthService-UpdateProfile] User profile updated successfully")
+	if emailChanged {
+		log.Info().Int64("user_id", userID).Str("email", email).Msg("[AuthService-UpdateProfile] Profile updated successfully, email verification pending")
+	} else {
+		log.Info().Int64("user_id", userID).Str("email", email).Msg("[AuthService-UpdateProfile] User profile updated successfully")
+	}
+
 	return nil
 }
 

@@ -7,6 +7,7 @@ type VerificationToken struct {
 	UserID    int64 `gorm:"index"`
 	Token     string
 	TokenType string
+	NewEmail  string
 	ExpiresAt time.Time
 	User      User `gorm:"foreignKey:UserID"`
 }

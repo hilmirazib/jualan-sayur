@@ -21,6 +21,7 @@ type AuthHandlerInterface interface {
 	SignIn(ctx echo.Context) error
 	CreateUserAccount(ctx echo.Context) error
 	VerifyUserAccount(ctx echo.Context) error
+	VerifyEmailChange(ctx echo.Context) error
 	ForgotPassword(ctx echo.Context) error
 	ResetPassword(ctx echo.Context) error
 	Logout(ctx echo.Context) error
@@ -636,6 +637,45 @@ func (a *AuthHandler) UpdateProfile(c echo.Context) error {
 
 	resp.Message = "Profile updated successfully"
 	log.Info().Int64("user_id", userID).Str("email", req.Email).Msg("[AuthHandler-UpdateProfile] User profile updated successfully")
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+func (a *AuthHandler) VerifyEmailChange(c echo.Context) error {
+	var (
+		resp = response.DefaultResponse{}
+		ctx  = c.Request().Context()
+	)
+
+	token := c.QueryParam("token")
+	if token == "" {
+		log.Warn().Msg("[AuthHandler-VerifyEmailChange] Missing verification token")
+		resp.Message = "Verification token is required"
+		return c.JSON(http.StatusBadRequest, resp)
+	}
+
+	err := a.userService.VerifyEmailChange(ctx, token)
+	if err != nil {
+		log.Error().Err(err).Str("token", token).Msg("[AuthHandler-VerifyEmailChange] Email change verification failed")
+
+		switch err.Error() {
+		case "invalid or expired verification token":
+			resp.Message = "Invalid or expired verification token"
+			return c.JSON(http.StatusBadRequest, resp)
+		case "invalid token type":
+			resp.Message = "Invalid token type"
+			return c.JSON(http.StatusBadRequest, resp)
+		case "failed to verify email change":
+			resp.Message = "Failed to verify email change"
+			return c.JSON(http.StatusInternalServerError, resp)
+		default:
+			resp.Message = "Internal server error"
+			return c.JSON(http.StatusInternalServerError, resp)
+		}
+	}
+
+	resp.Message = "Email change verified successfully. You can now sign in with your new email."
+	log.Info().Str("token", token).Msg("[AuthHandler-VerifyEmailChange] Email change verified successfully")
 
 	return c.JSON(http.StatusOK, resp)
 }

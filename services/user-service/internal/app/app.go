@@ -105,6 +105,7 @@ func RunServer() {
 	public.POST("/auth/signup", userHandler.CreateUserAccount)
 	public.POST("/auth/logout", userHandler.Logout, middleware.JWTMiddleware(cfg, sessionRepo, blacklistTokenRepo))
 	public.GET("/auth/verify", userHandler.VerifyUserAccount)
+	public.GET("/auth/verify-email-change", userHandler.VerifyEmailChange)
 	public.POST("/auth/forgot-password", userHandler.ForgotPassword)
 	public.POST("/auth/reset-password", userHandler.ResetPassword)
 	public.GET("/auth/profile", userHandler.Profile, middleware.JWTMiddleware(cfg, sessionRepo, blacklistTokenRepo))

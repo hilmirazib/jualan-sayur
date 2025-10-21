@@ -69,6 +69,11 @@ func (m *MockUserRepository) UpdateUserPhoto(ctx context.Context, userID int64, 
 	return args.Error(0)
 }
 
+func (m *MockUserRepository) UpdateUserEmail(ctx context.Context, userID int64, email string) error {
+	args := m.Called(ctx, userID, email)
+	return args.Error(0)
+}
+
 func (m *MockUserRepository) UpdateUserProfile(ctx context.Context, userID int64, name, email, phone, address string, lat, lng float64, photo string) error {
 	args := m.Called(ctx, userID, name, email, phone, address, lat, lng, photo)
 	return args.Error(0)

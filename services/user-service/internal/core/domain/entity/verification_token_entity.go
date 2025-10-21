@@ -7,6 +7,7 @@ type VerificationTokenEntity struct {
 	UserID    int64
 	Token     string
 	TokenType string
+	NewEmail  string // For email change verification
 	ExpiresAt time.Time
 	User      UserEntity
 }

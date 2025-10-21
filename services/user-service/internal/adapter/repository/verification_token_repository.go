@@ -25,6 +25,7 @@ func (r *VerificationTokenRepository) CreateVerificationToken(ctx context.Contex
 		UserID:    token.UserID,
 		Token:     token.Token,
 		TokenType: token.TokenType,
+		NewEmail:  token.NewEmail,
 		ExpiresAt: token.ExpiresAt,
 	}
 
@@ -50,6 +51,7 @@ func (r *VerificationTokenRepository) GetVerificationToken(ctx context.Context, 
 		UserID:    modelToken.UserID,
 		Token:     modelToken.Token,
 		TokenType: modelToken.TokenType,
+		NewEmail:  modelToken.NewEmail,
 		ExpiresAt: modelToken.ExpiresAt,
 	}, nil
 }

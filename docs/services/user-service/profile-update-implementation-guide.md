@@ -508,6 +508,81 @@ DB_NAME=micro_sayur
 | Method | Endpoint | Authentication | Description |
 |--------|----------|----------------|-------------|
 | PUT | `/api/v1/auth/profile` | Bearer Token | Update authenticated user's profile data |
+| GET | `/api/v1/auth/verify-email-change` | None | Verify email change using token from email |
+
+### Email Change Verification Flow
+
+#### Step 1: Update Profile with New Email
+```bash
+curl -X PUT \
+  http://localhost:8080/api/v1/auth/profile \
+  -H "Authorization: Bearer <valid_jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "newemail@example.com",
+    "name": "John Doe",
+    "phone": "081234567890",
+    "address": "Jakarta",
+    "lat": -6.2088,
+    "lng": 106.8456,
+    "photo": "https://example.com/photo.jpg"
+  }'
+```
+
+**Response (200):**
+```json
+{
+  "message": "Profile updated successfully",
+  "data": null
+}
+```
+
+**Note:** Sistem akan mengirim email verifikasi ke `newemail@example.com` dengan link yang berisi verification token.
+
+#### Step 2: Verify Email Change
+User menerima email dan mengklik link verifikasi yang mengarah ke endpoint berikut:
+
+```bash
+curl -X GET \
+  "http://localhost:8080/api/v1/auth/verify-email-change?token=<verification_token_from_email>"
+```
+
+**Success Response (200):**
+```json
+{
+  "message": "Email change verified successfully. You can now sign in with your new email.",
+  "data": null
+}
+```
+
+**Error Responses:**
+- **400 Bad Request**: Invalid or expired token
+- **500 Internal Server Error**: Database update failed
+
+#### Step 3: Login with New Email
+Setelah verifikasi berhasil, user dapat login dengan email baru:
+
+```bash
+curl -X POST \
+  http://localhost:8080/api/v1/auth/signin \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "newemail@example.com",
+    "password": "user_password"
+  }'
+```
+
+### Important Notes
+
+1. **Endpoint yang Benar**: Gunakan `/auth/verify-email-change` untuk verifikasi perubahan email, bukan `/auth/verify` yang digunakan untuk verifikasi akun awal.
+
+2. **Email Uniqueness**: Sistem memastikan email baru belum digunakan oleh user lain.
+
+3. **Verification Required**: Email tidak akan berubah sampai user mengklik link verifikasi di email baru.
+
+4. **Security**: Token verifikasi memiliki masa berlaku 24 jam dan hanya bisa digunakan sekali.
+
+5. **User Status**: Selama proses verifikasi, user tetap bisa login dengan email lama.
 
 ### Request Format
 ```json
@@ -589,10 +664,11 @@ func (s *AuthService) UpdateProfilePartial(ctx context.Context, userID int64, up
 - Change history API endpoint
 - Admin review capabilities
 
-### Phase 4: Email Change Verification
+### Phase 4: Email Change Verification ✅ IMPLEMENTED
 - Send verification email for email changes
 - Temporary email until verified
 - Rollback capability
+- Separate endpoint: `/auth/verify-email-change`
 
 ## 📝 Development Log
 

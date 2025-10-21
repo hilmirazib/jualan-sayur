@@ -244,6 +244,16 @@ func (u *UserRepository) UpdateUserPhoto(ctx context.Context, userID int64, phot
 	return nil
 }
 
+func (u *UserRepository) UpdateUserEmail(ctx context.Context, userID int64, email string) error {
+	if err := u.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", userID).Update("email", email).Error; err != nil {
+		log.Error().Err(err).Int64("user_id", userID).Str("email", email).Msg("[UserRepository-UpdateUserEmail] Failed to update user email")
+		return err
+	}
+
+	log.Info().Int64("user_id", userID).Str("email", email).Msg("[UserRepository-UpdateUserEmail] User email updated successfully")
+	return nil
+}
+
 func (u *UserRepository) UpdateUserProfile(ctx context.Context, userID int64, name, email, phone, address string, lat, lng float64, photo string) error {
 	// Format lat/lng from float64 to string for database
 	latStr, lngStr := u.formatLatLng(lat, lng)
