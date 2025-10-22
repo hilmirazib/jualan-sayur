@@ -86,3 +86,60 @@ func TestRoleService_GetAllRoles_EmptyResult(t *testing.T) {
 	assert.Len(t, roles, 0)
 	mockRoleRepo.AssertExpectations(t)
 }
+
+func TestRoleService_GetRoleByID_Success(t *testing.T) {
+	// Setup
+	mockRoleRepo := &mocks.MockRoleRepository{}
+	expectedRole := &entity.RoleEntity{
+		ID:   1,
+		Name: "Super Admin",
+		Users: []entity.UserEntity{
+			{ID: 1, Name: "Admin User", Email: "admin@example.com"},
+		},
+	}
+	mockRoleRepo.On("GetRoleByID", mock.Anything, int64(1)).Return(expectedRole, nil)
+
+	// Test service
+	roleService := service.NewRoleService(mockRoleRepo)
+	role, err := roleService.GetRoleByID(context.Background(), 1)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, expectedRole, role)
+	assert.Equal(t, "Super Admin", role.Name)
+	assert.Len(t, role.Users, 1)
+	mockRoleRepo.AssertExpectations(t)
+}
+
+func TestRoleService_GetRoleByID_NotFound(t *testing.T) {
+	// Setup
+	mockRoleRepo := &mocks.MockRoleRepository{}
+	mockRoleRepo.On("GetRoleByID", mock.Anything, int64(999)).Return(nil, errors.New("record not found"))
+
+	// Test service
+	roleService := service.NewRoleService(mockRoleRepo)
+	role, err := roleService.GetRoleByID(context.Background(), 999)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, role)
+	assert.Equal(t, "record not found", err.Error())
+	mockRoleRepo.AssertExpectations(t)
+}
+
+func TestRoleService_GetRoleByID_RepositoryError(t *testing.T) {
+	// Setup
+	mockRoleRepo := &mocks.MockRoleRepository{}
+	expectedError := errors.New("database connection failed")
+	mockRoleRepo.On("GetRoleByID", mock.Anything, int64(1)).Return(nil, expectedError)
+
+	// Test service
+	roleService := service.NewRoleService(mockRoleRepo)
+	role, err := roleService.GetRoleByID(context.Background(), 1)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, role)
+	assert.Equal(t, expectedError, err)
+	mockRoleRepo.AssertExpectations(t)
+}

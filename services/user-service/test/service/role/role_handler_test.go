@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -123,6 +124,151 @@ func TestRoleHandler_GetAllRoles_EmptyResult(t *testing.T) {
 	assert.Equal(t, "Roles retrieved successfully", response["message"])
 
 	// When no roles are found, data should be null (empty slice marshals to null)
+	assert.Nil(t, response["data"])
+
+	mockRoleService.AssertExpectations(t)
+}
+
+func TestRoleHandler_GetRoleByID_Success(t *testing.T) {
+	// Setup Echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/roles/1", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/admin/roles/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	// Setup mocks
+	mockRoleService := &mocks.MockRoleService{}
+	expectedRole := &entity.RoleEntity{
+		ID:   1,
+		Name: "Super Admin",
+		Users: []entity.UserEntity{
+			{ID: 1, Name: "Admin User", Email: "admin@example.com"},
+			{ID: 2, Name: "Another Admin", Email: "admin2@example.com"},
+		},
+	}
+	mockRoleService.On("GetRoleByID", mock.Anything, int64(1)).Return(expectedRole, nil)
+
+	// Test handler
+	roleHandler := handler.NewRoleHandler(mockRoleService)
+	err := roleHandler.GetRoleByID(c)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var response map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "Role retrieved successfully", response["message"])
+
+	data := response["data"].(map[string]interface{})
+	assert.Equal(t, float64(1), data["id"])
+	assert.Equal(t, "Super Admin", data["name"])
+
+	users := data["users"].([]interface{})
+	assert.Len(t, users, 2)
+
+	user1 := users[0].(map[string]interface{})
+	assert.Equal(t, float64(1), user1["id"])
+	assert.Equal(t, "Admin User", user1["name"])
+
+	user2 := users[1].(map[string]interface{})
+	assert.Equal(t, float64(2), user2["id"])
+	assert.Equal(t, "Another Admin", user2["name"])
+
+	mockRoleService.AssertExpectations(t)
+}
+
+func TestRoleHandler_GetRoleByID_InvalidID(t *testing.T) {
+	// Setup Echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/roles/abc", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/admin/roles/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("abc")
+
+	// Setup mocks
+	mockRoleService := &mocks.MockRoleService{}
+
+	// Test handler
+	roleHandler := handler.NewRoleHandler(mockRoleService)
+	err := roleHandler.GetRoleByID(c)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var response map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "Invalid role ID format", response["message"])
+	assert.Nil(t, response["data"])
+
+	mockRoleService.AssertNotCalled(t, "GetRoleByID", mock.Anything, mock.Anything)
+}
+
+func TestRoleHandler_GetRoleByID_NotFound(t *testing.T) {
+	// Setup Echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/roles/999", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/admin/roles/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("999")
+
+	// Setup mocks
+	mockRoleService := &mocks.MockRoleService{}
+	mockRoleService.On("GetRoleByID", mock.Anything, int64(999)).Return(nil, errors.New("record not found"))
+
+	// Test handler
+	roleHandler := handler.NewRoleHandler(mockRoleService)
+	err := roleHandler.GetRoleByID(c)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+
+	var response map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "Role not found", response["message"])
+	assert.Nil(t, response["data"])
+
+	mockRoleService.AssertExpectations(t)
+}
+
+func TestRoleHandler_GetRoleByID_ServiceError(t *testing.T) {
+	// Setup Echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/roles/1", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/admin/roles/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	// Setup mocks
+	mockRoleService := &mocks.MockRoleService{}
+	mockRoleService.On("GetRoleByID", mock.Anything, int64(1)).Return(nil, assert.AnError)
+
+	// Test handler
+	roleHandler := handler.NewRoleHandler(mockRoleService)
+	err := roleHandler.GetRoleByID(c)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+
+	var response map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "Failed to retrieve role", response["message"])
 	assert.Nil(t, response["data"])
 
 	mockRoleService.AssertExpectations(t)
