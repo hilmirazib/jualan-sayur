@@ -542,13 +542,16 @@ Content-Type: multipart/form-data
 go test ./...
 
 # Run service tests only
-go test ./test/
+go test ./test/service/
 
 # Run with verbose output
-go test -v ./test/
+go test -v ./test/service/
 
 # Run specific test file
-go test -v ./test/auth_service_test.go
+go test -v ./test/service/auth_service_test.go
+
+# Run integration/config tests
+go test -v ./test/test_config.go
 ```
 
 ### API Testing dengan cURL
