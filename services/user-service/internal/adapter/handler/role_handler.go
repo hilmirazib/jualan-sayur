@@ -17,6 +17,7 @@ type RoleHandlerInterface interface {
 	GetAllRoles(c echo.Context) error
 	GetRoleByID(c echo.Context) error
 	CreateRole(c echo.Context) error
+	UpdateRole(c echo.Context) error
 }
 
 type RoleHandler struct {
@@ -149,6 +150,72 @@ func (h *RoleHandler) CreateRole(c echo.Context) error {
 	log.Info().Int64("role_id", role.ID).Str("role_name", role.Name).Msg("[RoleHandler-CreateRole] Role created successfully")
 	return c.JSON(http.StatusCreated, map[string]interface{}{
 		"message": "Role created successfully",
+		"data":    nil,
+	})
+}
+
+func (h *RoleHandler) UpdateRole(c echo.Context) error {
+	// Get role ID from URL parameter
+	idParam := c.Param("id")
+
+	// Convert string ID to int64
+	var id int64
+	if _, err := fmt.Sscanf(idParam, "%d", &id); err != nil {
+		log.Warn().Str("id_param", idParam).Msg("[RoleHandler-UpdateRole] Invalid ID format")
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": "Invalid role ID format",
+			"data":    nil,
+		})
+	}
+
+	// Bind request
+	var req request.CreateRoleRequest
+	if err := c.Bind(&req); err != nil {
+		log.Warn().Err(err).Int64("role_id", id).Msg("[RoleHandler-UpdateRole] Failed to bind request")
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": "Invalid request format",
+			"data":    nil,
+		})
+	}
+
+	// Validate request
+	if err := h.validator.Validate(&req); err != nil {
+		log.Error().Err(err).Int64("role_id", id).Msg("[RoleHandler-UpdateRole] Validation failed")
+		return c.JSON(http.StatusUnprocessableEntity, map[string]interface{}{
+			"message": err.Error(),
+			"data":    nil,
+		})
+	}
+
+	// Update role
+	role, err := h.roleService.UpdateRole(c.Request().Context(), id, req.Name)
+	if err != nil {
+		log.Error().Err(err).Int64("role_id", id).Str("role_name", req.Name).Msg("[RoleHandler-UpdateRole] Failed to update role")
+
+		// Check for specific errors
+		if err.Error() == "role not found" {
+			return c.JSON(http.StatusNotFound, map[string]interface{}{
+				"message": "Role not found",
+				"data":    nil,
+			})
+		}
+
+		if strings.Contains(err.Error(), "already exists") {
+			return c.JSON(http.StatusBadRequest, map[string]interface{}{
+				"message": err.Error(),
+				"data":    nil,
+			})
+		}
+
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"message": "Failed to update role",
+			"data":    nil,
+		})
+	}
+
+	log.Info().Int64("role_id", id).Str("role_name", role.Name).Msg("[RoleHandler-UpdateRole] Role updated successfully")
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "Role updated successfully",
 		"data":    nil,
 	})
 }

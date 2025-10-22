@@ -98,6 +98,37 @@ func (r *RoleRepository) CreateRole(ctx context.Context, role *entity.RoleEntity
 	return createdRole, nil
 }
 
+func (r *RoleRepository) UpdateRole(ctx context.Context, id int64, role *entity.RoleEntity) (*entity.RoleEntity, error) {
+	var existingRole model.Role
+	if err := r.db.WithContext(ctx).First(&existingRole, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			log.Info().Int64("role_id", id).Msg("[RoleRepository-UpdateRole] Role not found")
+			return nil, gorm.ErrRecordNotFound
+		}
+		log.Error().Err(err).Int64("role_id", id).Msg("[RoleRepository-UpdateRole] Failed to find role")
+		return nil, err
+	}
+
+	// Update fields
+	existingRole.Name = role.Name
+
+	if err := r.db.WithContext(ctx).Save(&existingRole).Error; err != nil {
+		log.Error().Err(err).Int64("role_id", id).Str("role_name", role.Name).Msg("[RoleRepository-UpdateRole] Failed to update role")
+		return nil, err
+	}
+
+	// Convert back to entity
+	updatedRole := &entity.RoleEntity{
+		ID:        existingRole.ID,
+		Name:      existingRole.Name,
+		CreatedAt: existingRole.CreatedAt,
+		UpdatedAt: existingRole.UpdatedAt,
+	}
+
+	log.Info().Int64("role_id", id).Str("role_name", role.Name).Msg("[RoleRepository-UpdateRole] Role updated successfully")
+	return updatedRole, nil
+}
+
 func NewRoleRepository(db *gorm.DB) port.RoleRepositoryInterface {
 	return &RoleRepository{db: db}
 }
