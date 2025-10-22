@@ -548,6 +548,55 @@ curl -X GET \
   "message": "Authorization header required",
   "data": null
 }
+
+# Test get role by ID - Success (Super Admin)
+curl -X GET \
+  http://localhost:8080/api/v1/admin/roles/1 \
+  -H "Authorization: Bearer <super_admin_jwt_token>" \
+  -H "Content-Type: application/json"
+
+# Expected Response (200):
+{
+  "message": "Role retrieved successfully",
+  "data": {
+    "id": 1,
+    "name": "Super Admin",
+    "users": [
+      {
+        "id": 1,
+        "name": "Admin User"
+      },
+      {
+        "id": 2,
+        "name": "Another Admin"
+      }
+    ]
+  }
+}
+
+# Test get role by ID - Role Not Found
+curl -X GET \
+  http://localhost:8080/api/v1/admin/roles/999 \
+  -H "Authorization: Bearer <super_admin_jwt_token>" \
+  -H "Content-Type: application/json"
+
+# Expected Response (404):
+{
+  "message": "Role not found",
+  "data": null
+}
+
+# Test get role by ID - Invalid ID Format
+curl -X GET \
+  http://localhost:8080/api/v1/admin/roles/abc \
+  -H "Authorization: Bearer <super_admin_jwt_token>" \
+  -H "Content-Type: application/json"
+
+# Expected Response (400):
+{
+  "message": "Invalid role ID format",
+  "data": null
+}
 ```
 
 ### Load Testing
