@@ -522,7 +522,7 @@ func (s *AuthService) UpdateProfile(ctx context.Context, userID int64, name, ema
 		}
 
 		// Send verification email to new email
-		err = s.emailPublisher.SendVerificationEmail(ctx, email, token)
+		err = s.emailPublisher.SendEmailChangeVerificationEmail(ctx, email, token)
 		if err != nil {
 			log.Error().Err(err).Int64("user_id", userID).Str("email", email).Msg("[AuthService-UpdateProfile] Failed to send verification email")
 			// Don't fail the update, but log the error

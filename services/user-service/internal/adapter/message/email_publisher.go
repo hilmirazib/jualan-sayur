@@ -88,6 +88,64 @@ Your App Team`, name, verificationLink),
 	return nil
 }
 
+func (p *EmailPublisher) SendEmailChangeVerificationEmail(ctx context.Context, email, token string) error {
+	// Extract name from email (before @) or use default
+	name := "User"
+	if atIndex := strings.Index(email, "@"); atIndex > 0 {
+		name = email[:atIndex]
+		// Capitalize first letter
+		if len(name) > 0 {
+			name = strings.ToUpper(name[:1]) + strings.ToLower(name[1:])
+		}
+	}
+
+	verificationLink := "http://localhost:8080/api/v1/auth/verify-email-change?token=" + token
+
+	message := EmailVerificationMessage{
+		Email:   email,
+		Token:   token,
+		Type:    "email_change",
+		Name:    name,
+		Subject: "Verify Your Email Change",
+		Body: fmt.Sprintf(`Hi %s,
+
+You requested to change your email address. Please click this link to verify your new email:
+%s
+
+Link expires in 24 hours.
+
+If you didn't request this change, please ignore this email.
+
+Best regards,
+Your App Team`, name, verificationLink),
+	}
+
+	body, err := json.Marshal(message)
+	if err != nil {
+		log.Error().Err(err).Msg("[EmailPublisher-SendEmailChangeVerificationEmail] Failed to marshal message")
+		return err
+	}
+
+	err = p.channel.Publish(
+		"",            // exchange
+		"email_queue", // routing key
+		false,         // mandatory
+		false,         // immediate
+		amqp.Publishing{
+			ContentType: "application/json",
+			Body:        body,
+		},
+	)
+
+	if err != nil {
+		log.Error().Err(err).Str("email", email).Msg("[EmailPublisher-SendEmailChangeVerificationEmail] Failed to publish message")
+		return err
+	}
+
+	log.Info().Str("email", email).Msg("[EmailPublisher-SendEmailChangeVerificationEmail] Email change verification email sent to queue")
+	return nil
+}
+
 func (p *EmailPublisher) SendPasswordResetEmail(ctx context.Context, email, token string) error {
 	// Extract name from email (before @) or use default
 	name := "User"

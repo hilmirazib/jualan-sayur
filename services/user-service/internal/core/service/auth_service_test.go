@@ -621,7 +621,7 @@ func TestAuthService_UpdateProfile_DatabaseError(t *testing.T) {
 	mockStorage.On("DeleteFile", mock.Anything, "", "old-photo.jpg").Return(nil) // Photo cleanup
 	// Email change flow mocks
 	mockVerificationTokenRepo.On("CreateVerificationToken", ctx, mock.AnythingOfType("*entity.VerificationTokenEntity")).Return(nil)
-	mockEmailPublisher.On("SendVerificationEmail", ctx, email, mock.AnythingOfType("string")).Return(nil)
+	mockEmailPublisher.On("SendEmailChangeVerificationEmail", ctx, email, mock.AnythingOfType("string")).Return(nil)
 	mockUserRepo.On("UpdateUserVerificationStatus", ctx, userID, false).Return(nil)
 	// Profile update fails
 	mockUserRepo.On("UpdateUserProfile", ctx, userID, name, "old@example.com", phone, address, lat, lng, photo).Return(errors.New("database connection failed"))
@@ -859,7 +859,7 @@ func TestAuthService_CompleteEmailChangeFlow(t *testing.T) {
 		assert.Equal(t, "email_change", token.TokenType)
 		assert.Equal(t, newEmail, token.NewEmail)
 	})
-	mockEmailPublisher.On("SendVerificationEmail", ctx, newEmail, mock.AnythingOfType("string")).Return(nil)
+	mockEmailPublisher.On("SendEmailChangeVerificationEmail", ctx, newEmail, mock.AnythingOfType("string")).Return(nil)
 	mockUserRepo.On("UpdateUserVerificationStatus", ctx, userID, false).Return(nil)
 	mockUserRepo.On("UpdateUserProfile", ctx, userID, name, oldEmail, phone, address, lat, lng, photo).Return(nil)
 
