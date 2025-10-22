@@ -209,3 +209,29 @@ func (m *MockStorage) DeleteFile(ctx context.Context, bucketName, objectName str
 	args := m.Called(ctx, bucketName, objectName)
 	return args.Error(0)
 }
+
+// MockRoleRepository mocks the role repository
+type MockRoleRepository struct {
+	mock.Mock
+}
+
+func (m *MockRoleRepository) GetAllRoles(ctx context.Context, search string) ([]entity.RoleEntity, error) {
+	args := m.Called(ctx, search)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]entity.RoleEntity), args.Error(1)
+}
+
+// MockRoleService mocks the role service
+type MockRoleService struct {
+	mock.Mock
+}
+
+func (m *MockRoleService) GetAllRoles(ctx context.Context, search string) ([]entity.RoleEntity, error) {
+	args := m.Called(ctx, search)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]entity.RoleEntity), args.Error(1)
+}
