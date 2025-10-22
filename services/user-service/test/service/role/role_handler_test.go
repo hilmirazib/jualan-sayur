@@ -361,7 +361,7 @@ func TestRoleHandler_CreateRole_ValidationFailed(t *testing.T) {
 	var response map[string]interface{}
 	err = json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "Validation failed", response["message"])
+	assert.Equal(t, "Name is required", response["message"])
 	assert.Nil(t, response["data"])
 
 	mockRoleService.AssertNotCalled(t, "CreateRole", mock.Anything, mock.Anything)
