@@ -744,6 +744,54 @@ curl -X PUT \
   "message": "Invalid role ID format",
   "data": null
 }
+
+# Test delete role - Success (Super Admin)
+curl -X DELETE \
+  http://localhost:8080/api/v1/admin/roles/3 \
+  -H "Authorization: Bearer <super_admin_jwt_token>" \
+  -H "Content-Type: application/json"
+
+# Expected Response (200):
+{
+  "message": "Role deleted successfully",
+  "data": null
+}
+
+# Test delete role - Role Not Found
+curl -X DELETE \
+  http://localhost:8080/api/v1/admin/roles/999 \
+  -H "Authorization: Bearer <super_admin_jwt_token>" \
+  -H "Content-Type: application/json"
+
+# Expected Response (404):
+{
+  "message": "Role not found",
+  "data": null
+}
+
+# Test delete role - Role Has Users (Cannot Delete)
+curl -X DELETE \
+  http://localhost:8080/api/v1/admin/roles/1 \
+  -H "Authorization: Bearer <super_admin_jwt_token>" \
+  -H "Content-Type: application/json"
+
+# Expected Response (400):
+{
+  "message": "cannot delete role that is currently assigned to users",
+  "data": null
+}
+
+# Test delete role - Invalid ID Format
+curl -X DELETE \
+  http://localhost:8080/api/v1/admin/roles/abc \
+  -H "Authorization: Bearer <super_admin_jwt_token>" \
+  -H "Content-Type: application/json"
+
+# Expected Response (400):
+{
+  "message": "Invalid role ID format",
+  "data": null
+}
 ```
 
 ### Load Testing
@@ -814,6 +862,7 @@ SERVER_PORT=8080
 | GET | `/api/v1/admin/roles` | Bearer Token | Super Admin | Get all roles with optional search |
 | POST | `/api/v1/admin/roles` | Bearer Token | Super Admin | Create new role with validation |
 | PUT | `/api/v1/admin/roles/:id` | Bearer Token | Super Admin | Update existing role with validation |
+| DELETE | `/api/v1/admin/roles/:id` | Bearer Token | Super Admin | Delete role (soft delete, only if no users assigned) |
 | GET | `/api/v1/admin/roles/:id` | Bearer Token | Super Admin | Get role by ID with associated users |
 
 ### Request Format
