@@ -2,16 +2,25 @@
 
 ## 📋 Overview
 
-Dokumen ini menjelaskan implementasi lengkap fitur Get All Roles pada User Service menggunakan arsitektur Clean Architecture (Hexagonal). Endpoint ini memungkinkan Super Admin untuk mendapatkan daftar semua role yang tersedia dalam sistem dengan fitur pencarian opsional.
+Dokumen ini menjelaskan implementasi lengkap fitur Role Management pada User Service menggunakan arsitektur Clean Architecture (Hexagonal). Fitur ini mencakup operasi CRUD (Create, Read, Update, Delete) untuk manajemen role dengan kontrol akses ketat untuk Super Admin. Sistem ini memungkinkan Super Admin untuk membuat, melihat, dan mengelola role dalam sistem dengan fitur pencarian dan validasi yang komprehensif.
 
 ## 🎯 Business Requirements
 
 ### Functional Requirements
-- Super Admin dapat mengambil daftar semua role
-- Endpoint memerlukan autentikasi JWT dengan role Super Admin
-- Mendukung pencarian role berdasarkan nama (case-insensitive)
-- Response berisi array data role (id, name)
-- Error handling untuk berbagai skenario (401, 403, 500)
+- **Read Operations**:
+  - Super Admin dapat mengambil daftar semua role dengan pencarian opsional
+  - Super Admin dapat mengambil detail role tertentu beserta user yang terkait
+- **Create Operations**:
+  - Super Admin dapat membuat role baru dengan validasi nama unik
+  - Validasi nama role: 2-50 karakter, required, case-insensitive uniqueness
+- **Security Requirements**:
+  - Semua endpoint memerlukan autentikasi JWT dengan role Super Admin
+  - Middleware authorization yang ketat
+- **Response Format**:
+  - GetAll: Array data role (id, name)
+  - GetByID: Detail role dengan associated users
+  - Create: Confirmation response tanpa data
+- **Error Handling**: Comprehensive untuk skenario 400, 401, 403, 404, 409, 422, 500
 
 ### Non-Functional Requirements
 - Response time < 100ms untuk operasi normal
@@ -597,6 +606,64 @@ curl -X GET \
   "message": "Invalid role ID format",
   "data": null
 }
+
+# Test create role - Success (Super Admin)
+curl -X POST \
+  http://localhost:8080/api/v1/admin/roles \
+  -H "Authorization: Bearer <super_admin_jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Manager"
+  }'
+
+# Expected Response (201):
+{
+  "message": "Role created successfully",
+  "data": null
+}
+
+# Test create role - Validation Failed (Empty Name)
+curl -X POST \
+  http://localhost:8080/api/v1/admin/roles \
+  -H "Authorization: Bearer <super_admin_jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": ""
+  }'
+
+# Expected Response (422):
+{
+  "message": "Validation failed",
+  "data": null
+}
+
+# Test create role - Duplicate Name
+curl -X POST \
+  http://localhost:8080/api/v1/admin/roles \
+  -H "Authorization: Bearer <super_admin_jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Super Admin"
+  }'
+
+# Expected Response (400):
+{
+  "message": "role with name 'Super Admin' already exists",
+  "data": null
+}
+
+# Test create role - Invalid JSON
+curl -X POST \
+  http://localhost:8080/api/v1/admin/roles \
+  -H "Authorization: Bearer <super_admin_jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d 'invalid json'
+
+# Expected Response (400):
+{
+  "message": "Invalid request format",
+  "data": null
+}
 ```
 
 ### Load Testing
@@ -665,6 +732,7 @@ SERVER_PORT=8080
 | Method | Endpoint | Authentication | Authorization | Description |
 |--------|----------|----------------|---------------|-------------|
 | GET | `/api/v1/admin/roles` | Bearer Token | Super Admin | Get all roles with optional search |
+| POST | `/api/v1/admin/roles` | Bearer Token | Super Admin | Create new role with validation |
 | GET | `/api/v1/admin/roles/:id` | Bearer Token | Super Admin | Get role by ID with associated users |
 
 ### Request Format
