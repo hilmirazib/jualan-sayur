@@ -616,6 +616,7 @@ SERVER_PORT=8080
 | Method | Endpoint | Authentication | Authorization | Description |
 |--------|----------|----------------|---------------|-------------|
 | GET | `/api/v1/admin/roles` | Bearer Token | Super Admin | Get all roles with optional search |
+| GET | `/api/v1/admin/roles/:id` | Bearer Token | Super Admin | Get role by ID with associated users |
 
 ### Request Format
 ```http
