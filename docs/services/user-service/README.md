@@ -13,6 +13,9 @@ User Service adalah microservice yang menangani semua operasi terkait manajemen 
   - Get user profile data
   - Update user profile data (name, email, phone, address, location, photo)
   - Upload profile image
+- **Role Management**:
+  - Get all roles (Super Admin only)
+  - Role-based permissions with Super Admin access control
 - **Email Verification**: Verifikasi email untuk aktivasi akun
 - **Password Reset**: Forgot password dengan email reset link
 - **Session Management**: Manajemen session dengan Redis
@@ -73,6 +76,7 @@ GET    /api/v1/verification/verify    # Verify email token
 GET    /api/v1/admin/users            # List all users
 GET    /api/v1/admin/users/:id        # Get user details
 PUT    /api/v1/admin/users/:id/role   # Assign user role
+GET    /api/v1/admin/roles            # Get all roles (Super Admin only)
 ```
 
 ## Database Schema
