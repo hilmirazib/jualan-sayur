@@ -18,6 +18,7 @@ import (
 	"user-service/internal/core/port"
 	"user-service/internal/core/service"
 	"user-service/utils"
+	validatorUtils "user-service/utils/validator"
 
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
@@ -71,6 +72,9 @@ func RunServer() {
 	// Initialize Echo server
 	e := echo.New()
 	e.HideBanner = true
+
+	// Initialize validator
+	e.Validator = validatorUtils.NewValidator()
 
 	// Middleware
 	e.Use(middleware.CORSMiddleware())
