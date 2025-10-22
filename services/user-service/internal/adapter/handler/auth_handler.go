@@ -629,9 +629,9 @@ func (a *AuthHandler) UpdateProfile(c echo.Context) error {
 		case "user not found":
 			resp.Message = "User not found"
 			return c.JSON(http.StatusNotFound, resp)
-		case "failed to validate email":
-			resp.Message = "Failed to validate email"
-			return c.JSON(http.StatusUnprocessableEntity, resp)
+		case "unable to verify email availability":
+			resp.Message = "Unable to verify email availability"
+			return c.JSON(http.StatusInternalServerError, resp)
 		case "failed to generate verification token":
 			resp.Message = "Failed to generate verification token"
 			return c.JSON(http.StatusInternalServerError, resp)

@@ -474,7 +474,7 @@ func (s *AuthService) UpdateProfile(ctx context.Context, userID int64, name, ema
 		existingUser, err := s.userRepo.GetUserByEmailIncludingUnverified(ctx, email)
 		if err != nil && err.Error() != "record not found" {
 			log.Error().Err(err).Str("email", email).Msg("[AuthService-UpdateProfile] Failed to check email uniqueness")
-			return errors.New("failed to validate email")
+			return errors.New("unable to verify email availability")
 		}
 
 		// If email exists and it's not the current user, return error
