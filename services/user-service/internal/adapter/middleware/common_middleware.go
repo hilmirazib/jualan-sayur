@@ -94,3 +94,30 @@ func RateLimitMiddleware() echo.MiddlewareFunc {
 	}
 	return middleware.RateLimiterWithConfig(config)
 }
+
+// SuperAdminMiddleware checks if the user has Super Admin role
+func SuperAdminMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			userRole, exists := c.Get("user_role").(string)
+			if !exists {
+				log.Warn().Msg("[SuperAdminMiddleware] User role not found in context")
+				return c.JSON(http.StatusForbidden, map[string]interface{}{
+					"message": "Access denied",
+					"data":    nil,
+				})
+			}
+
+			if userRole != "Super Admin" {
+				log.Warn().Str("user_role", userRole).Msg("[SuperAdminMiddleware] User is not Super Admin")
+				return c.JSON(http.StatusForbidden, map[string]interface{}{
+					"message": "Access denied",
+					"data":    nil,
+				})
+			}
+
+			log.Info().Str("user_role", userRole).Msg("[SuperAdminMiddleware] Super Admin access granted")
+			return next(c)
+		}
+	}
+}

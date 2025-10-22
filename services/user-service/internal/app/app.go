@@ -29,6 +29,8 @@ import (
 type App struct {
 	UserService      port.UserServiceInterface
 	UserRepo         port.UserRepositoryInterface
+	RoleService      port.RoleServiceInterface
+	RoleRepo         port.RoleRepositoryInterface
 	JWTUtil          port.JWTInterface
 	DB               *gorm.DB
 	RabbitMQChannel  *amqp.Channel
@@ -99,6 +101,7 @@ func RunServer() {
 
 	// Initialize handlers
 	userHandler := handler.NewUserHandler(app.UserService)
+	roleHandler := handler.NewRoleHandler(app.RoleService)
 
 	public := e.Group("/api/v1")
 	public.POST("/auth/signin", userHandler.SignIn)
@@ -114,6 +117,7 @@ func RunServer() {
 
 	admin := e.Group("/api/v1/admin", middleware.JWTMiddleware(cfg, sessionRepo, blacklistTokenRepo))
 	admin.GET("/check", userHandler.AdminCheck)
+	admin.GET("/roles", roleHandler.GetAllRoles, middleware.SuperAdminMiddleware())
 
 	// Root endpoint - redirect to health
 	e.GET("/", func(c echo.Context) error {
@@ -180,6 +184,7 @@ func NewApp(cfg *config.Config) (*App, error) {
 
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db.DB)
+	roleRepo := repository.NewRoleRepository(db.DB)
 	sessionRepo := repository.NewSessionRepository(redisClient, cfg)
 	blacklistTokenRepo := repository.NewBlacklistTokenRepository(db.DB)
 
@@ -206,10 +211,13 @@ func NewApp(cfg *config.Config) (*App, error) {
 
 	// Initialize services
 	userService := service.NewUserService(userRepo, sessionRepo, jwtUtil, nil, emailPublisher, blacklistTokenRepo, supabaseStorage, cfg)
+	roleService := service.NewRoleService(roleRepo)
 
 	return &App{
 		UserService:     userService,
 		UserRepo:        userRepo,
+		RoleService:     roleService,
+		RoleRepo:        roleRepo,
 		JWTUtil:         jwtUtil,
 		DB:              db.DB,
 		RabbitMQChannel: rabbitMQChannel,
