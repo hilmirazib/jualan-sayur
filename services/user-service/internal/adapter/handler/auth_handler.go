@@ -626,6 +626,21 @@ func (a *AuthHandler) UpdateProfile(c echo.Context) error {
 		case "email already exists":
 			resp.Message = "Email already exists"
 			return c.JSON(http.StatusUnprocessableEntity, resp)
+		case "user not found":
+			resp.Message = "User not found"
+			return c.JSON(http.StatusNotFound, resp)
+		case "failed to validate email":
+			resp.Message = "Failed to validate email"
+			return c.JSON(http.StatusUnprocessableEntity, resp)
+		case "failed to generate verification token":
+			resp.Message = "Failed to generate verification token"
+			return c.JSON(http.StatusInternalServerError, resp)
+		case "failed to create verification token":
+			resp.Message = "Failed to create verification token"
+			return c.JSON(http.StatusInternalServerError, resp)
+		case "failed to update verification status":
+			resp.Message = "Failed to update verification status"
+			return c.JSON(http.StatusInternalServerError, resp)
 		case "failed to update profile":
 			resp.Message = "Failed to update profile"
 			return c.JSON(http.StatusInternalServerError, resp)
