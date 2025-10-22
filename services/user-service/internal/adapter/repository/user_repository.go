@@ -35,11 +35,10 @@ func (u *UserRepository) GetUserByEmail(ctx context.Context, email string) (*ent
 		roleName = "user" // Default role
 	}
 
-	// Parse lat/lng from string to float64
 	lat, lng, err := u.parseLatLng(modelUser.Lat, modelUser.Lng)
 	if err != nil {
-		log.Error().Err(err).Str("lat", modelUser.Lat).Str("lng", modelUser.Lng).Msg("[UserRepository-GetUserByEmail] Failed to parse lat/lng")
-		return nil, err
+		log.Warn().Err(err).Str("lat", modelUser.Lat).Str("lng", modelUser.Lng).Int64("user_id", modelUser.ID).Msg("[UserRepository-GetUserByEmail] Failed to parse lat/lng, using default values")
+		lat, lng = 0.0, 0.0
 	}
 
 	return &entity.UserEntity{
@@ -161,11 +160,12 @@ func (u *UserRepository) GetUserByID(ctx context.Context, userID int64) (*entity
 		roleName = "user" // Default role
 	}
 
-	// Parse lat/lng from string to float64
+	// Parse lat/lng from string to float64 with error handling
 	lat, lng, err := u.parseLatLng(modelUser.Lat, modelUser.Lng)
 	if err != nil {
-		log.Error().Err(err).Str("lat", modelUser.Lat).Str("lng", modelUser.Lng).Msg("[UserRepository-GetUserByID] Failed to parse lat/lng")
-		return nil, err
+		log.Warn().Err(err).Str("lat", modelUser.Lat).Str("lng", modelUser.Lng).Int64("user_id", modelUser.ID).Msg("[UserRepository-GetUserByID] Failed to parse lat/lng, using default values")
+		// Use default values instead of failing
+		lat, lng = 0.0, 0.0
 	}
 
 	return &entity.UserEntity{
@@ -202,11 +202,12 @@ func (u *UserRepository) GetUserByEmailIncludingUnverified(ctx context.Context, 
 		roleName = "user" // Default role
 	}
 
-	// Parse lat/lng from string to float64
+	// Parse lat/lng from string to float64 with error handling
 	lat, lng, err := u.parseLatLng(modelUser.Lat, modelUser.Lng)
 	if err != nil {
-		log.Error().Err(err).Str("lat", modelUser.Lat).Str("lng", modelUser.Lng).Msg("[UserRepository-GetUserByEmailIncludingUnverified] Failed to parse lat/lng")
-		return nil, err
+		log.Warn().Err(err).Str("lat", modelUser.Lat).Str("lng", modelUser.Lng).Int64("user_id", modelUser.ID).Msg("[UserRepository-GetUserByEmailIncludingUnverified] Failed to parse lat/lng, using default values")
+		// Use default values instead of failing - this prevents email uniqueness checking from breaking
+		lat, lng = 0.0, 0.0
 	}
 
 	return &entity.UserEntity{

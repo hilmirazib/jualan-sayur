@@ -669,7 +669,7 @@ func TestAuthService_UpdateProfile_EmailCheckError(t *testing.T) {
 
 	// Assert
 	assert.Error(t, err)
-	assert.Equal(t, "failed to validate email", err.Error())
+	assert.Equal(t, "unable to verify email availability", err.Error())
 	mockUserRepo.AssertExpectations(t)
 	mockUserRepo.AssertNotCalled(t, "UpdateUserProfile", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
