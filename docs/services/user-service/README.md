@@ -15,6 +15,7 @@ User Service adalah microservice yang menangani semua operasi terkait manajemen 
   - Upload profile image
 - **Role Management**:
   - Get all roles (Super Admin only)
+  - Get role by ID with associated users (Super Admin only)
   - Role-based permissions with Super Admin access control
 - **Email Verification**: Verifikasi email untuk aktivasi akun
 - **Password Reset**: Forgot password dengan email reset link
