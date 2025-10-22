@@ -76,6 +76,28 @@ func (r *RoleRepository) GetRoleByID(ctx context.Context, id int64) (*entity.Rol
 	return roleEntity, nil
 }
 
+func (r *RoleRepository) CreateRole(ctx context.Context, role *entity.RoleEntity) (*entity.RoleEntity, error) {
+	roleModel := &model.Role{
+		Name: role.Name,
+	}
+
+	if err := r.db.WithContext(ctx).Create(roleModel).Error; err != nil {
+		log.Error().Err(err).Str("role_name", role.Name).Msg("[RoleRepository-CreateRole] Failed to create role")
+		return nil, err
+	}
+
+	// Convert back to entity
+	createdRole := &entity.RoleEntity{
+		ID:        roleModel.ID,
+		Name:      roleModel.Name,
+		CreatedAt: roleModel.CreatedAt,
+		UpdatedAt: roleModel.UpdatedAt,
+	}
+
+	log.Info().Int64("role_id", createdRole.ID).Str("role_name", createdRole.Name).Msg("[RoleRepository-CreateRole] Role created successfully")
+	return createdRole, nil
+}
+
 func NewRoleRepository(db *gorm.DB) port.RoleRepositoryInterface {
 	return &RoleRepository{db: db}
 }

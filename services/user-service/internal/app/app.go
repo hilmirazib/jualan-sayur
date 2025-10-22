@@ -118,6 +118,7 @@ func RunServer() {
 	admin := e.Group("/api/v1/admin", middleware.JWTMiddleware(cfg, sessionRepo, blacklistTokenRepo))
 	admin.GET("/check", userHandler.AdminCheck)
 	admin.GET("/roles", roleHandler.GetAllRoles, middleware.SuperAdminMiddleware())
+	admin.POST("/roles", roleHandler.CreateRole, middleware.SuperAdminMiddleware())
 	admin.GET("/roles/:id", roleHandler.GetRoleByID, middleware.SuperAdminMiddleware())
 
 	// Root endpoint - redirect to health

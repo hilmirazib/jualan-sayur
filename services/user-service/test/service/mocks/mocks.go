@@ -231,6 +231,14 @@ func (m *MockRoleRepository) GetRoleByID(ctx context.Context, id int64) (*entity
 	return args.Get(0).(*entity.RoleEntity), args.Error(1)
 }
 
+func (m *MockRoleRepository) CreateRole(ctx context.Context, role *entity.RoleEntity) (*entity.RoleEntity, error) {
+	args := m.Called(ctx, role)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.RoleEntity), args.Error(1)
+}
+
 // MockRoleService mocks the role service
 type MockRoleService struct {
 	mock.Mock
@@ -246,6 +254,14 @@ func (m *MockRoleService) GetAllRoles(ctx context.Context, search string) ([]ent
 
 func (m *MockRoleService) GetRoleByID(ctx context.Context, id int64) (*entity.RoleEntity, error) {
 	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.RoleEntity), args.Error(1)
+}
+
+func (m *MockRoleService) CreateRole(ctx context.Context, name string) (*entity.RoleEntity, error) {
+	args := m.Called(ctx, name)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}

@@ -3,6 +3,8 @@ package handler
 import (
 	"fmt"
 	"net/http"
+	"strings"
+	"user-service/internal/adapter/handler/request"
 	"user-service/internal/core/port"
 
 	"github.com/labstack/echo/v4"
@@ -12,6 +14,7 @@ import (
 type RoleHandlerInterface interface {
 	GetAllRoles(c echo.Context) error
 	GetRoleByID(c echo.Context) error
+	CreateRole(c echo.Context) error
 }
 
 type RoleHandler struct {
@@ -96,6 +99,54 @@ func (h *RoleHandler) GetRoleByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message": "Role retrieved successfully",
 		"data":    roleData,
+	})
+}
+
+func (h *RoleHandler) CreateRole(c echo.Context) error {
+	// Bind request
+	var req request.CreateRoleRequest
+	if err := c.Bind(&req); err != nil {
+		log.Warn().Err(err).Msg("[RoleHandler-CreateRole] Failed to bind request")
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": "Invalid request format",
+			"data":    nil,
+		})
+	}
+
+	// Validate request
+	if err := c.Validate(&req); err != nil {
+		log.Warn().Err(err).Msg("[RoleHandler-CreateRole] Validation failed")
+		return c.JSON(http.StatusUnprocessableEntity, map[string]interface{}{
+			"message": "Validation failed",
+			"data":    nil,
+		})
+	}
+
+	// Create role
+	role, err := h.roleService.CreateRole(c.Request().Context(), req.Name)
+	if err != nil {
+		log.Error().Err(err).Str("role_name", req.Name).Msg("[RoleHandler-CreateRole] Failed to create role")
+
+		// Check for duplicate role error
+		if err.Error() == "role with name 'Super Admin' already exists" ||
+		   err.Error() == "role with name 'Customer' already exists" ||
+		   strings.Contains(err.Error(), "already exists") {
+			return c.JSON(http.StatusBadRequest, map[string]interface{}{
+				"message": err.Error(),
+				"data":    nil,
+			})
+		}
+
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"message": "Failed to create role",
+			"data":    nil,
+		})
+	}
+
+	log.Info().Int64("role_id", role.ID).Str("role_name", role.Name).Msg("[RoleHandler-CreateRole] Role created successfully")
+	return c.JSON(http.StatusCreated, map[string]interface{}{
+		"message": "Role created successfully",
+		"data":    nil,
 	})
 }
 

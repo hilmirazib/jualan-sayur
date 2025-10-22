@@ -5,10 +5,12 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"user-service/internal/core/domain/entity"
 	"user-service/internal/adapter/handler"
 	"user-service/test/service/mocks"
+	validatorUtils "user-service/utils/validator"
 
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
@@ -269,6 +271,155 @@ func TestRoleHandler_GetRoleByID_ServiceError(t *testing.T) {
 	err = json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
 	assert.Equal(t, "Failed to retrieve role", response["message"])
+	assert.Nil(t, response["data"])
+
+	mockRoleService.AssertExpectations(t)
+}
+
+func TestRoleHandler_CreateRole_Success(t *testing.T) {
+	// Setup Echo with validator
+	e := echo.New()
+	e.Validator = validatorUtils.NewValidator() // Add validator to Echo instance
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/roles", strings.NewReader(`{"name":"Manager"}`))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	// Setup mocks
+	mockRoleService := &mocks.MockRoleService{}
+	expectedRole := &entity.RoleEntity{
+		ID:   3,
+		Name: "Manager",
+	}
+	mockRoleService.On("CreateRole", mock.Anything, "Manager").Return(expectedRole, nil)
+
+	// Test handler
+	roleHandler := handler.NewRoleHandler(mockRoleService)
+	err := roleHandler.CreateRole(c)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, rec.Code)
+
+	var response map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "Role created successfully", response["message"])
+	assert.Nil(t, response["data"])
+
+	mockRoleService.AssertExpectations(t)
+}
+
+func TestRoleHandler_CreateRole_InvalidJSON(t *testing.T) {
+	// Setup Echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/roles", strings.NewReader(`invalid json`))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	// Setup mocks
+	mockRoleService := &mocks.MockRoleService{}
+
+	// Test handler
+	roleHandler := handler.NewRoleHandler(mockRoleService)
+	err := roleHandler.CreateRole(c)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var response map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "Invalid request format", response["message"])
+	assert.Nil(t, response["data"])
+
+	mockRoleService.AssertNotCalled(t, "CreateRole", mock.Anything, mock.Anything)
+}
+
+func TestRoleHandler_CreateRole_ValidationFailed(t *testing.T) {
+	// Setup Echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/roles", strings.NewReader(`{"name":""}`))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	// Setup mocks
+	mockRoleService := &mocks.MockRoleService{}
+
+	// Test handler
+	roleHandler := handler.NewRoleHandler(mockRoleService)
+	err := roleHandler.CreateRole(c)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+
+	var response map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "Validation failed", response["message"])
+	assert.Nil(t, response["data"])
+
+	mockRoleService.AssertNotCalled(t, "CreateRole", mock.Anything, mock.Anything)
+}
+
+func TestRoleHandler_CreateRole_DuplicateName(t *testing.T) {
+	// Setup Echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/roles", strings.NewReader(`{"name":"Super Admin"}`))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	// Setup mocks
+	mockRoleService := &mocks.MockRoleService{}
+	mockRoleService.On("CreateRole", mock.Anything, "Super Admin").Return(nil, errors.New("role with name 'Super Admin' already exists"))
+
+	// Test handler
+	roleHandler := handler.NewRoleHandler(mockRoleService)
+	err := roleHandler.CreateRole(c)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var response map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "role with name 'Super Admin' already exists", response["message"])
+	assert.Nil(t, response["data"])
+
+	mockRoleService.AssertExpectations(t)
+}
+
+func TestRoleHandler_CreateRole_ServiceError(t *testing.T) {
+	// Setup Echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/roles", strings.NewReader(`{"name":"Manager"}`))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	// Setup mocks
+	mockRoleService := &mocks.MockRoleService{}
+	mockRoleService.On("CreateRole", mock.Anything, "Manager").Return(nil, assert.AnError)
+
+	// Test handler
+	roleHandler := handler.NewRoleHandler(mockRoleService)
+	err := roleHandler.CreateRole(c)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+
+	var response map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "Failed to create role", response["message"])
 	assert.Nil(t, response["data"])
 
 	mockRoleService.AssertExpectations(t)
