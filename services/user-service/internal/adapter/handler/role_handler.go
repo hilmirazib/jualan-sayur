@@ -18,6 +18,7 @@ type RoleHandlerInterface interface {
 	GetRoleByID(c echo.Context) error
 	CreateRole(c echo.Context) error
 	UpdateRole(c echo.Context) error
+	DeleteRole(c echo.Context) error
 }
 
 type RoleHandler struct {
@@ -216,6 +217,53 @@ func (h *RoleHandler) UpdateRole(c echo.Context) error {
 	log.Info().Int64("role_id", id).Str("role_name", role.Name).Msg("[RoleHandler-UpdateRole] Role updated successfully")
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message": "Role updated successfully",
+		"data":    nil,
+	})
+}
+
+func (h *RoleHandler) DeleteRole(c echo.Context) error {
+	// Get role ID from URL parameter
+	idParam := c.Param("id")
+
+	// Convert string ID to int64
+	var id int64
+	if _, err := fmt.Sscanf(idParam, "%d", &id); err != nil {
+		log.Warn().Str("id_param", idParam).Msg("[RoleHandler-DeleteRole] Invalid ID format")
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"message": "Invalid role ID format",
+			"data":    nil,
+		})
+	}
+
+	// Delete role
+	err := h.roleService.DeleteRole(c.Request().Context(), id)
+	if err != nil {
+		log.Error().Err(err).Int64("role_id", id).Msg("[RoleHandler-DeleteRole] Failed to delete role")
+
+		// Check for specific errors
+		if err.Error() == "role not found" {
+			return c.JSON(http.StatusNotFound, map[string]interface{}{
+				"message": "Role not found",
+				"data":    nil,
+			})
+		}
+
+		if strings.Contains(err.Error(), "currently assigned to users") {
+			return c.JSON(http.StatusBadRequest, map[string]interface{}{
+				"message": err.Error(),
+				"data":    nil,
+			})
+		}
+
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"message": "Failed to delete role",
+			"data":    nil,
+		})
+	}
+
+	log.Info().Int64("role_id", id).Msg("[RoleHandler-DeleteRole] Role deleted successfully")
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "Role deleted successfully",
 		"data":    nil,
 	})
 }

@@ -592,6 +592,160 @@ func TestRoleHandler_UpdateRole_ServiceError(t *testing.T) {
 	mockRoleService.AssertExpectations(t)
 }
 
+func TestRoleHandler_DeleteRole_Success(t *testing.T) {
+	// Setup Echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/admin/roles/1", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/admin/roles/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	// Setup mocks
+	mockRoleService := &mocks.MockRoleService{}
+	mockRoleService.On("DeleteRole", mock.Anything, int64(1)).Return(nil)
+
+	// Test handler
+	roleHandler := handler.NewRoleHandler(mockRoleService)
+	err := roleHandler.DeleteRole(c)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var response map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "Role deleted successfully", response["message"])
+	assert.Nil(t, response["data"])
+
+	mockRoleService.AssertExpectations(t)
+}
+
+func TestRoleHandler_DeleteRole_InvalidID(t *testing.T) {
+	// Setup Echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/admin/roles/abc", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/admin/roles/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("abc")
+
+	// Setup mocks
+	mockRoleService := &mocks.MockRoleService{}
+
+	// Test handler
+	roleHandler := handler.NewRoleHandler(mockRoleService)
+	err := roleHandler.DeleteRole(c)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var response map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "Invalid role ID format", response["message"])
+	assert.Nil(t, response["data"])
+
+	mockRoleService.AssertNotCalled(t, "DeleteRole", mock.Anything, mock.Anything)
+}
+
+func TestRoleHandler_DeleteRole_NotFound(t *testing.T) {
+	// Setup Echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/admin/roles/999", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/admin/roles/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("999")
+
+	// Setup mocks
+	mockRoleService := &mocks.MockRoleService{}
+	mockRoleService.On("DeleteRole", mock.Anything, int64(999)).Return(errors.New("role not found"))
+
+	// Test handler
+	roleHandler := handler.NewRoleHandler(mockRoleService)
+	err := roleHandler.DeleteRole(c)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+
+	var response map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "Role not found", response["message"])
+	assert.Nil(t, response["data"])
+
+	mockRoleService.AssertExpectations(t)
+}
+
+func TestRoleHandler_DeleteRole_HasUsers(t *testing.T) {
+	// Setup Echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/admin/roles/1", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/admin/roles/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	// Setup mocks
+	mockRoleService := &mocks.MockRoleService{}
+	mockRoleService.On("DeleteRole", mock.Anything, int64(1)).Return(errors.New("cannot delete role that is currently assigned to users"))
+
+	// Test handler
+	roleHandler := handler.NewRoleHandler(mockRoleService)
+	err := roleHandler.DeleteRole(c)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var response map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "cannot delete role that is currently assigned to users", response["message"])
+	assert.Nil(t, response["data"])
+
+	mockRoleService.AssertExpectations(t)
+}
+
+func TestRoleHandler_DeleteRole_ServiceError(t *testing.T) {
+	// Setup Echo
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/admin/roles/1", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/admin/roles/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	// Setup mocks
+	mockRoleService := &mocks.MockRoleService{}
+	mockRoleService.On("DeleteRole", mock.Anything, int64(1)).Return(assert.AnError)
+
+	// Test handler
+	roleHandler := handler.NewRoleHandler(mockRoleService)
+	err := roleHandler.DeleteRole(c)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+
+	var response map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "Failed to delete role", response["message"])
+	assert.Nil(t, response["data"])
+
+	mockRoleService.AssertExpectations(t)
+}
+
 func TestRoleHandler_GetAllRoles_ServiceError(t *testing.T) {
 	// Setup Echo
 	e := echo.New()

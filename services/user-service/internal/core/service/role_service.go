@@ -146,6 +146,34 @@ func (s *RoleService) UpdateRole(ctx context.Context, id int64, name string) (*e
 	return updatedRole, nil
 }
 
+func (s *RoleService) DeleteRole(ctx context.Context, id int64) error {
+	// Check if role exists and get its details
+	role, err := s.roleRepo.GetRoleByID(ctx, id)
+	if err != nil {
+		if err.Error() == "record not found" {
+			log.Info().Int64("role_id", id).Msg("[RoleService-DeleteRole] Role not found")
+			return fmt.Errorf("role not found")
+		}
+		log.Error().Err(err).Int64("role_id", id).Msg("[RoleService-DeleteRole] Failed to get role")
+		return err
+	}
+
+	// Check if role has associated users
+	if len(role.Users) > 0 {
+		log.Warn().Int64("role_id", id).Int("user_count", len(role.Users)).Msg("[RoleService-DeleteRole] Cannot delete role with associated users")
+		return fmt.Errorf("cannot delete role that is currently assigned to users")
+	}
+
+	// Delete the role
+	if err := s.roleRepo.DeleteRole(ctx, id); err != nil {
+		log.Error().Err(err).Int64("role_id", id).Msg("[RoleService-DeleteRole] Failed to delete role")
+		return err
+	}
+
+	log.Info().Int64("role_id", id).Str("role_name", role.Name).Msg("[RoleService-DeleteRole] Role deleted successfully")
+	return nil
+}
+
 func NewRoleService(roleRepo port.RoleRepositoryInterface) port.RoleServiceInterface {
 	return &RoleService{
 		roleRepo: roleRepo,

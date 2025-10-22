@@ -124,6 +124,7 @@ func RunServer() {
 	admin.GET("/roles", roleHandler.GetAllRoles, middleware.SuperAdminMiddleware())
 	admin.POST("/roles", roleHandler.CreateRole, middleware.SuperAdminMiddleware())
 	admin.PUT("/roles/:id", roleHandler.UpdateRole, middleware.SuperAdminMiddleware())
+	admin.DELETE("/roles/:id", roleHandler.DeleteRole, middleware.SuperAdminMiddleware())
 	admin.GET("/roles/:id", roleHandler.GetRoleByID, middleware.SuperAdminMiddleware())
 
 	// Root endpoint - redirect to health

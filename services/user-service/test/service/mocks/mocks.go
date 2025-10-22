@@ -247,6 +247,11 @@ func (m *MockRoleRepository) UpdateRole(ctx context.Context, id int64, role *ent
 	return args.Get(0).(*entity.RoleEntity), args.Error(1)
 }
 
+func (m *MockRoleRepository) DeleteRole(ctx context.Context, id int64) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
 // MockRoleService mocks the role service
 type MockRoleService struct {
 	mock.Mock
@@ -282,4 +287,9 @@ func (m *MockRoleService) UpdateRole(ctx context.Context, id int64, name string)
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*entity.RoleEntity), args.Error(1)
+}
+
+func (m *MockRoleService) DeleteRole(ctx context.Context, id int64) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
 }

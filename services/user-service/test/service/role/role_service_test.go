@@ -71,6 +71,123 @@ func TestRoleService_GetAllRoles_RepositoryError(t *testing.T) {
 	mockRoleRepo.AssertExpectations(t)
 }
 
+func TestRoleService_DeleteRole_Success(t *testing.T) {
+	// Setup
+	mockRoleRepo := &mocks.MockRoleRepository{}
+	roleID := int64(1)
+	existingRole := &entity.RoleEntity{
+		ID:    roleID,
+		Name:  "Test Role",
+		Users: []entity.UserEntity{}, // No users assigned
+	}
+
+	// Mock get role by ID (role exists with no users)
+	mockRoleRepo.On("GetRoleByID", mock.Anything, roleID).Return(existingRole, nil)
+
+	// Mock delete role
+	mockRoleRepo.On("DeleteRole", mock.Anything, roleID).Return(nil)
+
+	// Test service
+	roleService := service.NewRoleService(mockRoleRepo)
+	err := roleService.DeleteRole(context.Background(), roleID)
+
+	// Assert
+	assert.NoError(t, err)
+	mockRoleRepo.AssertExpectations(t)
+}
+
+func TestRoleService_DeleteRole_NotFound(t *testing.T) {
+	// Setup
+	mockRoleRepo := &mocks.MockRoleRepository{}
+	roleID := int64(999)
+
+	// Mock get role by ID (role not found)
+	mockRoleRepo.On("GetRoleByID", mock.Anything, roleID).Return(nil, errors.New("record not found"))
+
+	// Test service
+	roleService := service.NewRoleService(mockRoleRepo)
+	err := roleService.DeleteRole(context.Background(), roleID)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Equal(t, "role not found", err.Error())
+	mockRoleRepo.AssertExpectations(t)
+	mockRoleRepo.AssertNotCalled(t, "DeleteRole", mock.Anything, mock.Anything)
+}
+
+func TestRoleService_DeleteRole_HasUsers(t *testing.T) {
+	// Setup
+	mockRoleRepo := &mocks.MockRoleRepository{}
+	roleID := int64(1)
+	existingRole := &entity.RoleEntity{
+		ID:   roleID,
+		Name: "Test Role",
+		Users: []entity.UserEntity{
+			{ID: 1, Name: "User 1", Email: "user1@example.com"},
+		}, // Has users assigned
+	}
+
+	// Mock get role by ID (role exists with users)
+	mockRoleRepo.On("GetRoleByID", mock.Anything, roleID).Return(existingRole, nil)
+
+	// Test service
+	roleService := service.NewRoleService(mockRoleRepo)
+	err := roleService.DeleteRole(context.Background(), roleID)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Equal(t, "cannot delete role that is currently assigned to users", err.Error())
+	mockRoleRepo.AssertExpectations(t)
+	mockRoleRepo.AssertNotCalled(t, "DeleteRole", mock.Anything, mock.Anything)
+}
+
+func TestRoleService_DeleteRole_GetRoleByIDError(t *testing.T) {
+	// Setup
+	mockRoleRepo := &mocks.MockRoleRepository{}
+	roleID := int64(1)
+	expectedError := errors.New("database connection failed")
+
+	// Mock get role by ID error
+	mockRoleRepo.On("GetRoleByID", mock.Anything, roleID).Return(nil, expectedError)
+
+	// Test service
+	roleService := service.NewRoleService(mockRoleRepo)
+	err := roleService.DeleteRole(context.Background(), roleID)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Equal(t, expectedError, err)
+	mockRoleRepo.AssertExpectations(t)
+	mockRoleRepo.AssertNotCalled(t, "DeleteRole", mock.Anything, mock.Anything)
+}
+
+func TestRoleService_DeleteRole_RepositoryError(t *testing.T) {
+	// Setup
+	mockRoleRepo := &mocks.MockRoleRepository{}
+	roleID := int64(1)
+	existingRole := &entity.RoleEntity{
+		ID:    roleID,
+		Name:  "Test Role",
+		Users: []entity.UserEntity{}, // No users assigned
+	}
+	expectedError := errors.New("database connection failed")
+
+	// Mock get role by ID (role exists with no users)
+	mockRoleRepo.On("GetRoleByID", mock.Anything, roleID).Return(existingRole, nil)
+
+	// Mock delete role error
+	mockRoleRepo.On("DeleteRole", mock.Anything, roleID).Return(expectedError)
+
+	// Test service
+	roleService := service.NewRoleService(mockRoleRepo)
+	err := roleService.DeleteRole(context.Background(), roleID)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Equal(t, expectedError, err)
+	mockRoleRepo.AssertExpectations(t)
+}
+
 func TestRoleService_UpdateRole_Success(t *testing.T) {
 	// Setup
 	mockRoleRepo := &mocks.MockRoleRepository{}

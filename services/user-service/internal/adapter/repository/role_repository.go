@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"user-service/internal/core/domain/entity"
 	"user-service/internal/core/domain/model"
 	"user-service/internal/core/port"
@@ -127,6 +128,41 @@ func (r *RoleRepository) UpdateRole(ctx context.Context, id int64, role *entity.
 
 	log.Info().Int64("role_id", id).Str("role_name", role.Name).Msg("[RoleRepository-UpdateRole] Role updated successfully")
 	return updatedRole, nil
+}
+
+func (r *RoleRepository) DeleteRole(ctx context.Context, id int64) error {
+	var role model.Role
+	if err := r.db.WithContext(ctx).First(&role, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			log.Info().Int64("role_id", id).Msg("[RoleRepository-DeleteRole] Role not found")
+			return gorm.ErrRecordNotFound
+		}
+		log.Error().Err(err).Int64("role_id", id).Msg("[RoleRepository-DeleteRole] Failed to find role")
+		return err
+	}
+
+	// Check if role has associated users using a join query
+	var userCount int64
+	if err := r.db.WithContext(ctx).Table("user_role").
+		Where("role_id = ?", id).
+		Count(&userCount).Error; err != nil {
+		log.Error().Err(err).Int64("role_id", id).Msg("[RoleRepository-DeleteRole] Failed to check associated users")
+		return err
+	}
+
+	if userCount > 0 {
+		log.Warn().Int64("role_id", id).Int64("user_count", userCount).Msg("[RoleRepository-DeleteRole] Cannot delete role with associated users")
+		return fmt.Errorf("cannot delete role that is currently assigned to users")
+	}
+
+	// Soft delete the role
+	if err := r.db.WithContext(ctx).Delete(&role).Error; err != nil {
+		log.Error().Err(err).Int64("role_id", id).Msg("[RoleRepository-DeleteRole] Failed to delete role")
+		return err
+	}
+
+	log.Info().Int64("role_id", id).Str("role_name", role.Name).Msg("[RoleRepository-DeleteRole] Role deleted successfully")
+	return nil
 }
 
 func NewRoleRepository(db *gorm.DB) port.RoleRepositoryInterface {
