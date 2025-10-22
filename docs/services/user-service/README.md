@@ -78,6 +78,7 @@ GET    /api/v1/admin/users            # List all users
 GET    /api/v1/admin/users/:id        # Get user details
 PUT    /api/v1/admin/users/:id/role   # Assign user role
 GET    /api/v1/admin/roles            # Get all roles (Super Admin only)
+GET    /api/v1/admin/roles/:id         # Get All By ID (Super Admin Only)
 ```
 
 ## Database Schema
