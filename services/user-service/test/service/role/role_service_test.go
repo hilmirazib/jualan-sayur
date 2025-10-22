@@ -71,6 +71,251 @@ func TestRoleService_GetAllRoles_RepositoryError(t *testing.T) {
 	mockRoleRepo.AssertExpectations(t)
 }
 
+func TestRoleService_UpdateRole_Success(t *testing.T) {
+	// Setup
+	mockRoleRepo := &mocks.MockRoleRepository{}
+	roleID := int64(1)
+	newName := "Updated Admin"
+	existingRole := &entity.RoleEntity{
+		ID:   roleID,
+		Name: "Super Admin",
+	}
+
+	// Mock get role by ID (role exists)
+	mockRoleRepo.On("GetRoleByID", mock.Anything, roleID).Return(existingRole, nil)
+
+	// Mock existing roles check (no duplicates)
+	mockRoleRepo.On("GetAllRoles", mock.Anything, "").Return([]entity.RoleEntity{
+		{ID: 1, Name: "Super Admin"},
+		{ID: 2, Name: "Customer"},
+	}, nil)
+
+	// Mock update role
+	updatedRole := &entity.RoleEntity{
+		ID:   roleID,
+		Name: newName,
+	}
+	mockRoleRepo.On("UpdateRole", mock.Anything, roleID, mock.AnythingOfType("*entity.RoleEntity")).Return(updatedRole, nil)
+
+	// Test service
+	roleService := service.NewRoleService(mockRoleRepo)
+	role, err := roleService.UpdateRole(context.Background(), roleID, newName)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, updatedRole, role)
+	assert.Equal(t, newName, role.Name)
+	mockRoleRepo.AssertExpectations(t)
+}
+
+func TestRoleService_UpdateRole_NotFound(t *testing.T) {
+	// Setup
+	mockRoleRepo := &mocks.MockRoleRepository{}
+	roleID := int64(999)
+	newName := "Updated Admin"
+
+	// Mock get role by ID (role not found)
+	mockRoleRepo.On("GetRoleByID", mock.Anything, roleID).Return(nil, errors.New("record not found"))
+
+	// Test service
+	roleService := service.NewRoleService(mockRoleRepo)
+	role, err := roleService.UpdateRole(context.Background(), roleID, newName)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, role)
+	assert.Equal(t, "role not found", err.Error())
+	mockRoleRepo.AssertExpectations(t)
+	mockRoleRepo.AssertNotCalled(t, "GetAllRoles", mock.Anything, mock.Anything)
+	mockRoleRepo.AssertNotCalled(t, "UpdateRole", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestRoleService_UpdateRole_EmptyName(t *testing.T) {
+	// Setup
+	mockRoleRepo := &mocks.MockRoleRepository{}
+
+	// Test service
+	roleService := service.NewRoleService(mockRoleRepo)
+	role, err := roleService.UpdateRole(context.Background(), 1, "")
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, role)
+	assert.Equal(t, "role name cannot be empty", err.Error())
+	mockRoleRepo.AssertNotCalled(t, "GetRoleByID", mock.Anything, mock.Anything)
+	mockRoleRepo.AssertNotCalled(t, "GetAllRoles", mock.Anything, mock.Anything)
+	mockRoleRepo.AssertNotCalled(t, "UpdateRole", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestRoleService_UpdateRole_WhitespaceName(t *testing.T) {
+	// Setup
+	mockRoleRepo := &mocks.MockRoleRepository{}
+
+	// Test service
+	roleService := service.NewRoleService(mockRoleRepo)
+	role, err := roleService.UpdateRole(context.Background(), 1, "   ")
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, role)
+	assert.Equal(t, "role name cannot be empty", err.Error())
+	mockRoleRepo.AssertNotCalled(t, "GetRoleByID", mock.Anything, mock.Anything)
+	mockRoleRepo.AssertNotCalled(t, "GetAllRoles", mock.Anything, mock.Anything)
+	mockRoleRepo.AssertNotCalled(t, "UpdateRole", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestRoleService_UpdateRole_NameTooShort(t *testing.T) {
+	// Setup
+	mockRoleRepo := &mocks.MockRoleRepository{}
+
+	// Test service
+	roleService := service.NewRoleService(mockRoleRepo)
+	role, err := roleService.UpdateRole(context.Background(), 1, "A")
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, role)
+	assert.Equal(t, "role name must be between 2 and 50 characters", err.Error())
+	mockRoleRepo.AssertNotCalled(t, "GetRoleByID", mock.Anything, mock.Anything)
+	mockRoleRepo.AssertNotCalled(t, "GetAllRoles", mock.Anything, mock.Anything)
+	mockRoleRepo.AssertNotCalled(t, "UpdateRole", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestRoleService_UpdateRole_NameTooLong(t *testing.T) {
+	// Setup
+	mockRoleRepo := &mocks.MockRoleRepository{}
+	longName := strings.Repeat("A", 51)
+
+	// Test service
+	roleService := service.NewRoleService(mockRoleRepo)
+	role, err := roleService.UpdateRole(context.Background(), 1, longName)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, role)
+	assert.Equal(t, "role name must be between 2 and 50 characters", err.Error())
+	mockRoleRepo.AssertNotCalled(t, "GetRoleByID", mock.Anything, mock.Anything)
+	mockRoleRepo.AssertNotCalled(t, "GetAllRoles", mock.Anything, mock.Anything)
+	mockRoleRepo.AssertNotCalled(t, "UpdateRole", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestRoleService_UpdateRole_DuplicateName(t *testing.T) {
+	// Setup
+	mockRoleRepo := &mocks.MockRoleRepository{}
+	roleID := int64(1)
+	newName := "Customer"
+	existingRole := &entity.RoleEntity{
+		ID:   roleID,
+		Name: "Super Admin",
+	}
+
+	// Mock get role by ID (role exists)
+	mockRoleRepo.On("GetRoleByID", mock.Anything, roleID).Return(existingRole, nil)
+
+	// Mock existing roles check (contains duplicate)
+	mockRoleRepo.On("GetAllRoles", mock.Anything, "").Return([]entity.RoleEntity{
+		{ID: 1, Name: "Super Admin"},
+		{ID: 2, Name: "Customer"},
+	}, nil)
+
+	// Test service
+	roleService := service.NewRoleService(mockRoleRepo)
+	role, err := roleService.UpdateRole(context.Background(), roleID, newName)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, role)
+	assert.Equal(t, "role with name 'Customer' already exists", err.Error())
+	mockRoleRepo.AssertExpectations(t)
+	mockRoleRepo.AssertNotCalled(t, "UpdateRole", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestRoleService_UpdateRole_GetRoleByIDError(t *testing.T) {
+	// Setup
+	mockRoleRepo := &mocks.MockRoleRepository{}
+	roleID := int64(1)
+	newName := "Updated Admin"
+	expectedError := errors.New("database connection failed")
+
+	// Mock get role by ID error
+	mockRoleRepo.On("GetRoleByID", mock.Anything, roleID).Return(nil, expectedError)
+
+	// Test service
+	roleService := service.NewRoleService(mockRoleRepo)
+	role, err := roleService.UpdateRole(context.Background(), roleID, newName)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, role)
+	assert.Equal(t, expectedError, err)
+	mockRoleRepo.AssertExpectations(t)
+	mockRoleRepo.AssertNotCalled(t, "GetAllRoles", mock.Anything, mock.Anything)
+	mockRoleRepo.AssertNotCalled(t, "UpdateRole", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestRoleService_UpdateRole_CheckExistingRolesError(t *testing.T) {
+	// Setup
+	mockRoleRepo := &mocks.MockRoleRepository{}
+	roleID := int64(1)
+	newName := "Updated Admin"
+	existingRole := &entity.RoleEntity{
+		ID:   roleID,
+		Name: "Super Admin",
+	}
+	expectedError := errors.New("database connection failed")
+
+	// Mock get role by ID (role exists)
+	mockRoleRepo.On("GetRoleByID", mock.Anything, roleID).Return(existingRole, nil)
+
+	// Mock existing roles check error
+	mockRoleRepo.On("GetAllRoles", mock.Anything, "").Return(nil, expectedError)
+
+	// Test service
+	roleService := service.NewRoleService(mockRoleRepo)
+	role, err := roleService.UpdateRole(context.Background(), roleID, newName)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, role)
+	assert.Equal(t, expectedError, err)
+	mockRoleRepo.AssertExpectations(t)
+	mockRoleRepo.AssertNotCalled(t, "UpdateRole", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestRoleService_UpdateRole_RepositoryError(t *testing.T) {
+	// Setup
+	mockRoleRepo := &mocks.MockRoleRepository{}
+	roleID := int64(1)
+	newName := "Updated Admin"
+	existingRole := &entity.RoleEntity{
+		ID:   roleID,
+		Name: "Super Admin",
+	}
+	expectedError := errors.New("database connection failed")
+
+	// Mock get role by ID (role exists)
+	mockRoleRepo.On("GetRoleByID", mock.Anything, roleID).Return(existingRole, nil)
+
+	// Mock existing roles check (no duplicates)
+	mockRoleRepo.On("GetAllRoles", mock.Anything, "").Return([]entity.RoleEntity{
+		{ID: 1, Name: "Super Admin"},
+		{ID: 2, Name: "Customer"},
+	}, nil)
+
+	// Mock update role error
+	mockRoleRepo.On("UpdateRole", mock.Anything, roleID, mock.AnythingOfType("*entity.RoleEntity")).Return(nil, expectedError)
+
+	// Test service
+	roleService := service.NewRoleService(mockRoleRepo)
+	role, err := roleService.UpdateRole(context.Background(), roleID, newName)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, role)
+	assert.Equal(t, expectedError, err)
+	mockRoleRepo.AssertExpectations(t)
+}
+
 func TestRoleService_GetAllRoles_EmptyResult(t *testing.T) {
 	// Setup
 	mockRoleRepo := &mocks.MockRoleRepository{}
