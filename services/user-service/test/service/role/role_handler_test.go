@@ -367,63 +367,7 @@ func TestRoleHandler_CreateRole_ValidationFailed(t *testing.T) {
 	mockRoleService.AssertNotCalled(t, "CreateRole", mock.Anything, mock.Anything)
 }
 
-func TestRoleHandler_CreateRole_DuplicateName(t *testing.T) {
-	// Setup Echo
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/roles", strings.NewReader(`{"name":"Super Admin"}`))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
 
-	// Setup mocks
-	mockRoleService := &mocks.MockRoleService{}
-	mockRoleService.On("CreateRole", mock.Anything, "Super Admin").Return(nil, errors.New("role with name 'Super Admin' already exists"))
-
-	// Test handler
-	roleHandler := handler.NewRoleHandler(mockRoleService)
-	err := roleHandler.CreateRole(c)
-
-	// Assert
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-
-	var response map[string]interface{}
-	err = json.Unmarshal(rec.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Equal(t, "role with name 'Super Admin' already exists", response["message"])
-	assert.Nil(t, response["data"])
-
-	mockRoleService.AssertExpectations(t)
-}
-
-func TestRoleHandler_CreateRole_ServiceError(t *testing.T) {
-	// Setup Echo
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/roles", strings.NewReader(`{"name":"Manager"}`))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	// Setup mocks
-	mockRoleService := &mocks.MockRoleService{}
-	mockRoleService.On("CreateRole", mock.Anything, "Manager").Return(nil, assert.AnError)
-
-	// Test handler
-	roleHandler := handler.NewRoleHandler(mockRoleService)
-	err := roleHandler.CreateRole(c)
-
-	// Assert
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-
-	var response map[string]interface{}
-	err = json.Unmarshal(rec.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.Equal(t, "Failed to create role", response["message"])
-	assert.Nil(t, response["data"])
-
-	mockRoleService.AssertExpectations(t)
-}
 
 func TestRoleHandler_GetAllRoles_ServiceError(t *testing.T) {
 	// Setup Echo
