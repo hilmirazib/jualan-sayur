@@ -7,6 +7,9 @@ import (
 	"user-service/internal/adapter/handler/request"
 	"user-service/internal/core/port"
 
+	"github.com/go-playground/validator/v10"
+	myvalidator "user-service/utils/validator"
+
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
 )
@@ -19,6 +22,7 @@ type RoleHandlerInterface interface {
 
 type RoleHandler struct {
 	roleService port.RoleServiceInterface
+	validator   *myvalidator.Validator
 }
 
 func (h *RoleHandler) GetAllRoles(c echo.Context) error {
@@ -114,8 +118,38 @@ func (h *RoleHandler) CreateRole(c echo.Context) error {
 	}
 
 	// Validate request
-	if err := c.Validate(&req); err != nil {
-		log.Warn().Err(err).Msg("[RoleHandler-CreateRole] Validation failed")
+	if err := h.validator.Validate(&req); err != nil {
+		log.Error().Err(err).Msg("[RoleHandler-CreateRole] Validation failed")
+
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			for _, fieldError := range validationErrors {
+				fieldName := fieldError.Field()
+				tag := fieldError.Tag()
+
+				switch fieldName {
+				case "Name":
+					if tag == "required" {
+						return c.JSON(http.StatusUnprocessableEntity, map[string]interface{}{
+							"message": "Name is required",
+							"data":    nil,
+						})
+					}
+					if tag == "min" {
+						return c.JSON(http.StatusUnprocessableEntity, map[string]interface{}{
+							"message": "Name must be at least 2 characters long",
+							"data":    nil,
+						})
+					}
+					if tag == "max" {
+						return c.JSON(http.StatusUnprocessableEntity, map[string]interface{}{
+							"message": "Name must not exceed 50 characters",
+							"data":    nil,
+						})
+					}
+				}
+			}
+		}
+
 		return c.JSON(http.StatusUnprocessableEntity, map[string]interface{}{
 			"message": "Validation failed",
 			"data":    nil,
@@ -153,5 +187,6 @@ func (h *RoleHandler) CreateRole(c echo.Context) error {
 func NewRoleHandler(roleService port.RoleServiceInterface) RoleHandlerInterface {
 	return &RoleHandler{
 		roleService: roleService,
+		validator:   myvalidator.NewValidator(),
 	}
 }
