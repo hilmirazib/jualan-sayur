@@ -1,10 +1,11 @@
-package service
+package main
 
 import (
 	"context"
 	"errors"
 	"testing"
 	"user-service/config"
+	"user-service/internal/core/service"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -15,7 +16,7 @@ func TestUserService_Logout_Success(t *testing.T) {
 	mockSessionRepo := new(MockSessionRepository)
 	mockBlacklistRepo := new(MockBlacklistTokenRepository)
 	mockStorage := new(MockStorage)
-	service := NewUserService(nil, mockSessionRepo, nil, nil, nil, mockBlacklistRepo, mockStorage, &config.Config{})
+	service := service.NewUserService(nil, mockSessionRepo, nil, nil, nil, mockBlacklistRepo, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -40,7 +41,7 @@ func TestUserService_Logout_SessionDeletionFails(t *testing.T) {
 	// Setup
 	mockSessionRepo := new(MockSessionRepository)
 	mockStorage := new(MockStorage)
-	service := NewUserService(nil, mockSessionRepo, nil, nil, nil, nil, mockStorage, &config.Config{})
+	service := service.NewUserService(nil, mockSessionRepo, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -63,7 +64,7 @@ func TestUserService_Logout_BlacklistFailureIgnored(t *testing.T) {
 	mockSessionRepo := new(MockSessionRepository)
 	mockBlacklistRepo := new(MockBlacklistTokenRepository)
 	mockStorage := new(MockStorage)
-	service := NewUserService(nil, mockSessionRepo, nil, nil, nil, mockBlacklistRepo, mockStorage, &config.Config{})
+	service := service.NewUserService(nil, mockSessionRepo, nil, nil, nil, mockBlacklistRepo, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -88,7 +89,7 @@ func TestUserService_Logout_WithoutToken(t *testing.T) {
 	// Setup
 	mockSessionRepo := new(MockSessionRepository)
 	mockStorage := new(MockStorage)
-	service := NewUserService(nil, mockSessionRepo, nil, nil, nil, nil, mockStorage, &config.Config{})
+	service := service.NewUserService(nil, mockSessionRepo, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -111,7 +112,7 @@ func TestUserService_Logout_WithoutExpiration(t *testing.T) {
 	mockSessionRepo := new(MockSessionRepository)
 	mockBlacklistRepo := new(MockBlacklistTokenRepository)
 	mockStorage := new(MockStorage)
-	service := NewUserService(mockUserRepo, mockSessionRepo, nil, nil, nil, mockBlacklistRepo, mockStorage, &config.Config{})
+	service := service.NewUserService(mockUserRepo, mockSessionRepo, nil, nil, nil, mockBlacklistRepo, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	userID := int64(1)

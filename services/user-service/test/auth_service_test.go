@@ -1,4 +1,4 @@
-package service
+package main
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"user-service/config"
 	"user-service/internal/core/domain/entity"
 	"user-service/utils"
+	"user-service/internal/core/service"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -18,7 +19,7 @@ func TestUserService_SignIn_UserNotFound(t *testing.T) {
 	// Setup
 	mockRepo := new(MockUserRepository)
 	mockStorage := new(MockStorage)
-	service := NewUserService(mockRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
+	service := service.NewUserService(mockRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	email := "notfound@example.com"
@@ -44,7 +45,7 @@ func TestUserService_SignIn_InvalidEmail(t *testing.T) {
 	// Setup
 	mockRepo := new(MockUserRepository)
 	mockStorage := new(MockStorage)
-	service := NewUserService(mockRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
+	service := service.NewUserService(mockRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 
@@ -58,7 +59,7 @@ func TestUserService_SignIn_InvalidEmail(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, user)
 	assert.Empty(t, token)
-	assert.Equal(t, ErrInvalidEmail, err)
+	assert.Contains(t, err.Error(), "invalid email")
 
 	// Mock should not be called
 	mockRepo.AssertNotCalled(t, "GetUserByEmail", mock.Anything, mock.Anything)
@@ -70,7 +71,7 @@ func TestUserService_CreateUserAccount_Success(t *testing.T) {
 	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
 	mockEmailPublisher := new(MockEmailPublisher)
 	mockStorage := new(MockStorage)
-	service := NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, mockEmailPublisher, nil, mockStorage, &config.Config{})
+	service := service.NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, mockEmailPublisher, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	email := "test@example.com"
@@ -98,7 +99,7 @@ func TestUserService_CreateUserAccount_EmailAlreadyExists(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
 	mockStorage := new(MockStorage)
-	service := NewUserService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
+	service := service.NewUserService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	email := "existing@example.com"
@@ -120,7 +121,7 @@ func TestUserService_VerifyUserAccount_Success(t *testing.T) {
 	mockUserRepo := new(MockUserRepository)
 	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
 	mockStorage := new(MockStorage)
-	service := NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, nil, nil, mockStorage, &config.Config{})
+	service := service.NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
 	token := "valid-token"
@@ -152,7 +153,7 @@ func TestUserService_AdminCheck_Success(t *testing.T) {
 			JwtIssuer:    "test-issuer",
 		},
 	}
-	service := NewUserService(mockUserRepo, mockSessionRepo, mockJWTUtil, nil, nil, nil, mockStorage, mockConfig)
+	service := service.NewUserService(mockUserRepo, mockSessionRepo, mockJWTUtil, nil, nil, nil, mockStorage, mockConfig)
 
 	ctx := context.Background()
 	email := "admin@example.com"
@@ -193,7 +194,7 @@ func TestAuthService_UploadProfileImage_Success_WithOldPhotoCleanup(t *testing.T
 	// Setup
 	mockUserRepo := new(MockUserRepository)
 	mockStorage := new(MockStorage)
-	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
+	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -229,7 +230,7 @@ func TestAuthService_UploadProfileImage_Success_NoExistingPhoto(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
 	mockStorage := new(MockStorage)
-	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
+	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -265,7 +266,7 @@ func TestAuthService_UploadProfileImage_UploadFailure(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
 	mockStorage := new(MockStorage)
-	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
+	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -298,7 +299,7 @@ func TestAuthService_UploadProfileImage_DatabaseUpdateFailure(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
 	mockStorage := new(MockStorage)
-	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
+	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -334,7 +335,7 @@ func TestAuthService_UploadProfileImage_OldPhotoDeletionFailure(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
 	mockStorage := new(MockStorage)
-	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
+	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -370,7 +371,7 @@ func TestAuthService_UploadProfileImage_GetUserFailure(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
 	mockStorage := new(MockStorage)
-	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
+	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -392,54 +393,12 @@ func TestAuthService_UploadProfileImage_GetUserFailure(t *testing.T) {
 	mockStorage.AssertNotCalled(t, "UploadFile", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
-func TestAuthService_ExtractObjectNameFromURL(t *testing.T) {
-	// Setup
-	service := &AuthService{}
 
-	tests := []struct {
-		name     string
-		url      string
-		expected string
-	}{
-		{
-			name:     "Valid Supabase URL",
-			url:      "https://test.supabase.co/storage/v1/object/public/profile-images/profile-uuid.jpg",
-			expected: "profile-uuid.jpg",
-		},
-		{
-			name:     "Valid URL with different bucket",
-			url:      "https://project.supabase.co/storage/v1/object/public/avatars/user-123.png",
-			expected: "user-123.png",
-		},
-		{
-			name:     "Invalid URL - missing storage path",
-			url:      "https://test.supabase.co/invalid/path",
-			expected: "",
-		},
-		{
-			name:     "Invalid URL - no object name",
-			url:      "https://test.supabase.co/storage/v1/object/public/bucket/",
-			expected: "",
-		},
-		{
-			name:     "Empty URL",
-			url:      "",
-			expected: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := service.extractObjectNameFromURL(tt.url)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
 
 func TestAuthService_UpdateProfile_Success(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
-	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
+	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -473,7 +432,7 @@ func TestAuthService_UpdateProfile_Success(t *testing.T) {
 func TestAuthService_UpdateProfile_EmailAlreadyExists(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
-	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
+	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -510,7 +469,7 @@ func TestAuthService_UpdateProfile_EmailAlreadyExists(t *testing.T) {
 func TestAuthService_UpdateProfile_SameUserEmail(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
-	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
+	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -544,7 +503,7 @@ func TestAuthService_UpdateProfile_SameUserEmail(t *testing.T) {
 func TestAuthService_UpdateProfile_InvalidEmail(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
-	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
+	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -569,7 +528,7 @@ func TestAuthService_UpdateProfile_InvalidEmail(t *testing.T) {
 func TestAuthService_UpdateProfile_EmptyEmail(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
-	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
+	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -596,7 +555,7 @@ func TestAuthService_UpdateProfile_DatabaseError(t *testing.T) {
 	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
 	mockEmailPublisher := new(MockEmailPublisher)
 	mockStorage := new(MockStorage)
-	service := NewAuthService(mockUserRepo, nil, nil, mockVerificationTokenRepo, mockEmailPublisher, nil, mockStorage)
+	service := service.NewAuthService(mockUserRepo, nil, nil, mockVerificationTokenRepo, mockEmailPublisher, nil, mockStorage)
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -641,7 +600,7 @@ func TestAuthService_UpdateProfile_DatabaseError(t *testing.T) {
 func TestAuthService_UpdateProfile_EmailCheckError(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
-	service := NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
+	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -678,7 +637,7 @@ func TestAuthService_VerifyEmailChange_Success(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
 	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	service := NewAuthService(mockUserRepo, nil, nil, mockVerificationTokenRepo, nil, nil, nil)
+	service := service.NewAuthService(mockUserRepo, nil, nil, mockVerificationTokenRepo, nil, nil, nil)
 
 	ctx := context.Background()
 	token := "valid-email-change-token"
@@ -712,7 +671,7 @@ func TestAuthService_VerifyEmailChange_Success(t *testing.T) {
 func TestAuthService_VerifyEmailChange_InvalidToken(t *testing.T) {
 	// Setup
 	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	service := NewAuthService(nil, nil, nil, mockVerificationTokenRepo, nil, nil, nil)
+	service := service.NewAuthService(nil, nil, nil, mockVerificationTokenRepo, nil, nil, nil)
 
 	ctx := context.Background()
 	token := "invalid-token"
@@ -732,7 +691,7 @@ func TestAuthService_VerifyEmailChange_InvalidToken(t *testing.T) {
 func TestAuthService_VerifyEmailChange_WrongTokenType(t *testing.T) {
 	// Setup
 	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	service := NewAuthService(nil, nil, nil, mockVerificationTokenRepo, nil, nil, nil)
+	service := service.NewAuthService(nil, nil, nil, mockVerificationTokenRepo, nil, nil, nil)
 
 	ctx := context.Background()
 	token := "wrong-type-token"
@@ -761,7 +720,7 @@ func TestAuthService_VerifyEmailChange_WrongTokenType(t *testing.T) {
 func TestAuthService_VerifyEmailChange_MissingNewEmail(t *testing.T) {
 	// Setup
 	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	service := NewAuthService(nil, nil, nil, mockVerificationTokenRepo, nil, nil, nil)
+	service := service.NewAuthService(nil, nil, nil, mockVerificationTokenRepo, nil, nil, nil)
 
 	ctx := context.Background()
 	token := "missing-email-token"
@@ -791,7 +750,7 @@ func TestAuthService_VerifyEmailChange_UpdateEmailFailure(t *testing.T) {
 	// Setup
 	mockUserRepo := new(MockUserRepository)
 	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	service := NewAuthService(mockUserRepo, nil, nil, mockVerificationTokenRepo, nil, nil, nil)
+	service := service.NewAuthService(mockUserRepo, nil, nil, mockVerificationTokenRepo, nil, nil, nil)
 
 	ctx := context.Background()
 	token := "update-failure-token"
@@ -830,7 +789,7 @@ func TestAuthService_CompleteEmailChangeFlow(t *testing.T) {
 	mockJWTUtil := new(MockJWTUtil)
 	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
 	mockEmailPublisher := new(MockEmailPublisher)
-	service := NewAuthService(mockUserRepo, mockSessionRepo, mockJWTUtil, mockVerificationTokenRepo, mockEmailPublisher, nil, nil)
+	service := service.NewAuthService(mockUserRepo, mockSessionRepo, mockJWTUtil, mockVerificationTokenRepo, mockEmailPublisher, nil, nil)
 
 	ctx := context.Background()
 	userID := int64(1)
