@@ -13,6 +13,10 @@ Dokumen ini menjelaskan implementasi lengkap fitur Role Management pada User Ser
 - **Create Operations**:
   - Super Admin dapat membuat role baru dengan validasi nama unik
   - Validasi nama role: 2-50 karakter, required, case-insensitive uniqueness
+- **Update Operations**:
+  - Super Admin dapat mengupdate role yang ada dengan validasi nama unik
+  - Validasi sama seperti create: 2-50 karakter, required, case-insensitive uniqueness
+  - Role harus ada sebelum diupdate
 - **Security Requirements**:
   - Semua endpoint memerlukan autentikasi JWT dengan role Super Admin
   - Middleware authorization yang ketat
@@ -20,6 +24,7 @@ Dokumen ini menjelaskan implementasi lengkap fitur Role Management pada User Ser
   - GetAll: Array data role (id, name)
   - GetByID: Detail role dengan associated users
   - Create: Confirmation response tanpa data
+  - Update: Confirmation response tanpa data
 - **Error Handling**: Comprehensive untuk skenario 400, 401, 403, 404, 409, 422, 500
 
 ### Non-Functional Requirements
@@ -664,6 +669,81 @@ curl -X POST \
   "message": "Invalid request format",
   "data": null
 }
+
+# Test update role - Success (Super Admin)
+curl -X PUT \
+  http://localhost:8080/api/v1/admin/roles/1 \
+  -H "Authorization: Bearer <super_admin_jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Super Administrator"
+  }'
+
+# Expected Response (200):
+{
+  "message": "Role updated successfully",
+  "data": null
+}
+
+# Test update role - Role Not Found
+curl -X PUT \
+  http://localhost:8080/api/v1/admin/roles/999 \
+  -H "Authorization: Bearer <super_admin_jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "New Role Name"
+  }'
+
+# Expected Response (404):
+{
+  "message": "Role not found",
+  "data": null
+}
+
+# Test update role - Validation Failed (Empty Name)
+curl -X PUT \
+  http://localhost:8080/api/v1/admin/roles/1 \
+  -H "Authorization: Bearer <super_admin_jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": ""
+  }'
+
+# Expected Response (422):
+{
+  "message": "Name is required",
+  "data": null
+}
+
+# Test update role - Duplicate Name
+curl -X PUT \
+  http://localhost:8080/api/v1/admin/roles/1 \
+  -H "Authorization: Bearer <super_admin_jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Customer"
+  }'
+
+# Expected Response (400):
+{
+  "message": "role with name 'Customer' already exists",
+  "data": null
+}
+
+# Test update role - Invalid ID Format
+curl -X PUT \
+  http://localhost:8080/api/v1/admin/roles/abc \
+  -H "Authorization: Bearer <super_admin_jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Valid Role Name"
+  }'
+
+# Expected Response (400):
+{
+  "message": "Invalid role ID format",
+  "data": null
+}
 ```
 
 ### Load Testing
@@ -733,6 +813,7 @@ SERVER_PORT=8080
 |--------|----------|----------------|---------------|-------------|
 | GET | `/api/v1/admin/roles` | Bearer Token | Super Admin | Get all roles with optional search |
 | POST | `/api/v1/admin/roles` | Bearer Token | Super Admin | Create new role with validation |
+| PUT | `/api/v1/admin/roles/:id` | Bearer Token | Super Admin | Update existing role with validation |
 | GET | `/api/v1/admin/roles/:id` | Bearer Token | Super Admin | Get role by ID with associated users |
 
 ### Request Format
