@@ -8,6 +8,7 @@ import (
 	"user-service/internal/core/domain/entity"
 	"user-service/utils"
 	"user-service/internal/core/service"
+	"user-service/test/service/mocks"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -15,8 +16,8 @@ import (
 
 func TestUserService_SignIn_UserNotFound(t *testing.T) {
 	// Setup
-	mockRepo := new(MockUserRepository)
-	mockStorage := new(MockStorage)
+	mockRepo := new(mocks.MockUserRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewUserService(mockRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
@@ -41,8 +42,8 @@ func TestUserService_SignIn_UserNotFound(t *testing.T) {
 
 func TestUserService_SignIn_InvalidEmail(t *testing.T) {
 	// Setup
-	mockRepo := new(MockUserRepository)
-	mockStorage := new(MockStorage)
+	mockRepo := new(mocks.MockUserRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewUserService(mockRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
@@ -65,10 +66,10 @@ func TestUserService_SignIn_InvalidEmail(t *testing.T) {
 
 func TestUserService_AdminCheck_Success(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockSessionRepo := new(MockSessionRepository)
-	mockJWTUtil := new(MockJWTUtil)
-	mockStorage := new(MockStorage)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockSessionRepo := new(mocks.MockSessionRepository)
+	mockJWTUtil := new(mocks.MockJWTUtil)
+	mockStorage := new(mocks.MockStorage)
 	mockConfig := &config.Config{
 		App: config.App{
 			JwtSecretKey: "test-secret-key",

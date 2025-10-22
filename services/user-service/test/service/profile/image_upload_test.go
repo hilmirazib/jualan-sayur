@@ -7,6 +7,7 @@ import (
 	"testing"
 	"user-service/internal/core/domain/entity"
 	"user-service/internal/core/service"
+	"user-service/test/service/mocks"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -14,8 +15,8 @@ import (
 
 func TestAuthService_UploadProfileImage_Success_WithOldPhotoCleanup(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockStorage := new(MockStorage)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
 
 	ctx := context.Background()
@@ -50,8 +51,8 @@ func TestAuthService_UploadProfileImage_Success_WithOldPhotoCleanup(t *testing.T
 
 func TestAuthService_UploadProfileImage_Success_NoExistingPhoto(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockStorage := new(MockStorage)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
 
 	ctx := context.Background()
@@ -86,8 +87,8 @@ func TestAuthService_UploadProfileImage_Success_NoExistingPhoto(t *testing.T) {
 
 func TestAuthService_UploadProfileImage_UploadFailure(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockStorage := new(MockStorage)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
 
 	ctx := context.Background()
@@ -119,8 +120,8 @@ func TestAuthService_UploadProfileImage_UploadFailure(t *testing.T) {
 
 func TestAuthService_UploadProfileImage_DatabaseUpdateFailure(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockStorage := new(MockStorage)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
 
 	ctx := context.Background()
@@ -155,8 +156,8 @@ func TestAuthService_UploadProfileImage_DatabaseUpdateFailure(t *testing.T) {
 
 func TestAuthService_UploadProfileImage_OldPhotoDeletionFailure(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockStorage := new(MockStorage)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
 
 	ctx := context.Background()
@@ -191,8 +192,8 @@ func TestAuthService_UploadProfileImage_OldPhotoDeletionFailure(t *testing.T) {
 
 func TestAuthService_UploadProfileImage_GetUserFailure(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockStorage := new(MockStorage)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage)
 
 	ctx := context.Background()

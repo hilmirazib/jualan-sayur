@@ -7,6 +7,7 @@ import (
 	"user-service/config"
 	"user-service/internal/core/domain/entity"
 	"user-service/internal/core/service"
+	"user-service/test/service/mocks"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -14,10 +15,10 @@ import (
 
 func TestUserService_ForgotPassword_Success(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	mockEmailPublisher := new(MockEmailPublisher)
-	mockStorage := new(MockStorage)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockVerificationTokenRepo := new(mocks.MockVerificationTokenRepository)
+	mockEmailPublisher := new(mocks.MockEmailPublisher)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, mockEmailPublisher, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
@@ -46,8 +47,8 @@ func TestUserService_ForgotPassword_Success(t *testing.T) {
 
 func TestUserService_ForgotPassword_InvalidEmail(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockStorage := new(MockStorage)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewUserService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
@@ -65,8 +66,8 @@ func TestUserService_ForgotPassword_InvalidEmail(t *testing.T) {
 
 func TestUserService_ForgotPassword_UserNotFound(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockStorage := new(MockStorage)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewUserService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
@@ -85,8 +86,8 @@ func TestUserService_ForgotPassword_UserNotFound(t *testing.T) {
 
 func TestUserService_ForgotPassword_UserNotVerified(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockStorage := new(MockStorage)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewUserService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
@@ -111,9 +112,9 @@ func TestUserService_ForgotPassword_UserNotVerified(t *testing.T) {
 
 func TestUserService_ResetPassword_Success(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	mockStorage := new(MockStorage)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockVerificationTokenRepo := new(mocks.MockVerificationTokenRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
@@ -143,8 +144,8 @@ func TestUserService_ResetPassword_Success(t *testing.T) {
 
 func TestUserService_ResetPassword_InvalidToken(t *testing.T) {
 	// Setup
-	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	mockStorage := new(MockStorage)
+	mockVerificationTokenRepo := new(mocks.MockVerificationTokenRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewUserService(nil, nil, nil, mockVerificationTokenRepo, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
@@ -164,8 +165,8 @@ func TestUserService_ResetPassword_InvalidToken(t *testing.T) {
 
 func TestUserService_ResetPassword_PasswordMismatch(t *testing.T) {
 	// Setup
-	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	mockStorage := new(MockStorage)
+	mockVerificationTokenRepo := new(mocks.MockVerificationTokenRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewUserService(nil, nil, nil, mockVerificationTokenRepo, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
@@ -186,8 +187,8 @@ func TestUserService_ResetPassword_PasswordMismatch(t *testing.T) {
 
 func TestUserService_ResetPassword_PasswordTooShort(t *testing.T) {
 	// Setup
-	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	mockStorage := new(MockStorage)
+	mockVerificationTokenRepo := new(mocks.MockVerificationTokenRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewUserService(nil, nil, nil, mockVerificationTokenRepo, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
@@ -208,8 +209,8 @@ func TestUserService_ResetPassword_PasswordTooShort(t *testing.T) {
 
 func TestUserService_ResetPassword_WrongTokenType(t *testing.T) {
 	// Setup
-	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	mockStorage := new(MockStorage)
+	mockVerificationTokenRepo := new(mocks.MockVerificationTokenRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewUserService(nil, nil, nil, mockVerificationTokenRepo, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()

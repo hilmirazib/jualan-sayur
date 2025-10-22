@@ -6,6 +6,7 @@ import (
 	"testing"
 	"user-service/internal/core/domain/entity"
 	"user-service/internal/core/service"
+	"user-service/test/service/mocks"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -13,7 +14,7 @@ import (
 
 func TestAuthService_UpdateProfile_Success(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
+	mockUserRepo := new(mocks.MockUserRepository)
 	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
 
 	ctx := context.Background()
@@ -47,7 +48,7 @@ func TestAuthService_UpdateProfile_Success(t *testing.T) {
 
 func TestAuthService_UpdateProfile_EmailAlreadyExists(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
+	mockUserRepo := new(mocks.MockUserRepository)
 	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
 
 	ctx := context.Background()
@@ -84,7 +85,7 @@ func TestAuthService_UpdateProfile_EmailAlreadyExists(t *testing.T) {
 
 func TestAuthService_UpdateProfile_SameUserEmail(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
+	mockUserRepo := new(mocks.MockUserRepository)
 	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
 
 	ctx := context.Background()
@@ -118,7 +119,7 @@ func TestAuthService_UpdateProfile_SameUserEmail(t *testing.T) {
 
 func TestAuthService_UpdateProfile_InvalidEmail(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
+	mockUserRepo := new(mocks.MockUserRepository)
 	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
 
 	ctx := context.Background()
@@ -143,7 +144,7 @@ func TestAuthService_UpdateProfile_InvalidEmail(t *testing.T) {
 
 func TestAuthService_UpdateProfile_EmptyEmail(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
+	mockUserRepo := new(mocks.MockUserRepository)
 	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
 
 	ctx := context.Background()
@@ -167,10 +168,10 @@ func TestAuthService_UpdateProfile_EmptyEmail(t *testing.T) {
 
 func TestAuthService_UpdateProfile_DatabaseError(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	mockEmailPublisher := new(MockEmailPublisher)
-	mockStorage := new(MockStorage)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockVerificationTokenRepo := new(mocks.MockVerificationTokenRepository)
+	mockEmailPublisher := new(mocks.MockEmailPublisher)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewAuthService(mockUserRepo, nil, nil, mockVerificationTokenRepo, mockEmailPublisher, nil, mockStorage)
 
 	ctx := context.Background()
@@ -215,7 +216,7 @@ func TestAuthService_UpdateProfile_DatabaseError(t *testing.T) {
 
 func TestAuthService_UpdateProfile_EmailCheckError(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
+	mockUserRepo := new(mocks.MockUserRepository)
 	service := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
 
 	ctx := context.Background()

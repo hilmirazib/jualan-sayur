@@ -7,14 +7,15 @@ import (
 	"user-service/config"
 	"user-service/internal/core/domain/entity"
 	"user-service/internal/core/service"
+	"user-service/test/service/mocks"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestUserService_GetProfile_Success(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockStorage := new(MockStorage)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewUserService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
@@ -47,8 +48,8 @@ func TestUserService_GetProfile_Success(t *testing.T) {
 
 func TestUserService_GetProfile_UserNotFound(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockStorage := new(MockStorage)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewUserService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
@@ -69,8 +70,8 @@ func TestUserService_GetProfile_UserNotFound(t *testing.T) {
 
 func TestUserService_GetProfile_DatabaseError(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockStorage := new(MockStorage)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewUserService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()

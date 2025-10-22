@@ -7,6 +7,7 @@ import (
 	"user-service/config"
 	"user-service/internal/core/domain/entity"
 	"user-service/internal/core/service"
+	"user-service/test/service/mocks"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -14,10 +15,10 @@ import (
 
 func TestUserService_CreateUserAccount_Success(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	mockEmailPublisher := new(MockEmailPublisher)
-	mockStorage := new(MockStorage)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockVerificationTokenRepo := new(mocks.MockVerificationTokenRepository)
+	mockEmailPublisher := new(mocks.MockEmailPublisher)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, mockEmailPublisher, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
@@ -44,8 +45,8 @@ func TestUserService_CreateUserAccount_Success(t *testing.T) {
 
 func TestUserService_CreateUserAccount_EmailAlreadyExists(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockStorage := new(MockStorage)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewUserService(mockUserRepo, nil, nil, nil, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()
@@ -65,9 +66,9 @@ func TestUserService_CreateUserAccount_EmailAlreadyExists(t *testing.T) {
 
 func TestUserService_VerifyUserAccount_Success(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	mockStorage := new(MockStorage)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockVerificationTokenRepo := new(mocks.MockVerificationTokenRepository)
+	mockStorage := new(mocks.MockStorage)
 	service := service.NewUserService(mockUserRepo, nil, nil, mockVerificationTokenRepo, nil, nil, mockStorage, &config.Config{})
 
 	ctx := context.Background()

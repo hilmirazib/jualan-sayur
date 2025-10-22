@@ -7,6 +7,7 @@ import (
 	"time"
 	"user-service/internal/core/domain/entity"
 	"user-service/internal/core/service"
+	"user-service/test/service/mocks"
 	"user-service/utils"
 
 	"github.com/stretchr/testify/assert"
@@ -15,8 +16,8 @@ import (
 
 func TestAuthService_VerifyEmailChange_Success(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockVerificationTokenRepo := new(mocks.MockVerificationTokenRepository)
 	service := service.NewAuthService(mockUserRepo, nil, nil, mockVerificationTokenRepo, nil, nil, nil)
 
 	ctx := context.Background()
@@ -50,7 +51,7 @@ func TestAuthService_VerifyEmailChange_Success(t *testing.T) {
 
 func TestAuthService_VerifyEmailChange_InvalidToken(t *testing.T) {
 	// Setup
-	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
+	mockVerificationTokenRepo := new(mocks.MockVerificationTokenRepository)
 	service := service.NewAuthService(nil, nil, nil, mockVerificationTokenRepo, nil, nil, nil)
 
 	ctx := context.Background()
@@ -70,7 +71,7 @@ func TestAuthService_VerifyEmailChange_InvalidToken(t *testing.T) {
 
 func TestAuthService_VerifyEmailChange_WrongTokenType(t *testing.T) {
 	// Setup
-	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
+	mockVerificationTokenRepo := new(mocks.MockVerificationTokenRepository)
 	service := service.NewAuthService(nil, nil, nil, mockVerificationTokenRepo, nil, nil, nil)
 
 	ctx := context.Background()
@@ -99,7 +100,7 @@ func TestAuthService_VerifyEmailChange_WrongTokenType(t *testing.T) {
 
 func TestAuthService_VerifyEmailChange_MissingNewEmail(t *testing.T) {
 	// Setup
-	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
+	mockVerificationTokenRepo := new(mocks.MockVerificationTokenRepository)
 	service := service.NewAuthService(nil, nil, nil, mockVerificationTokenRepo, nil, nil, nil)
 
 	ctx := context.Background()
@@ -128,8 +129,8 @@ func TestAuthService_VerifyEmailChange_MissingNewEmail(t *testing.T) {
 
 func TestAuthService_VerifyEmailChange_UpdateEmailFailure(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockVerificationTokenRepo := new(mocks.MockVerificationTokenRepository)
 	service := service.NewAuthService(mockUserRepo, nil, nil, mockVerificationTokenRepo, nil, nil, nil)
 
 	ctx := context.Background()
@@ -164,11 +165,11 @@ func TestAuthService_VerifyEmailChange_UpdateEmailFailure(t *testing.T) {
 
 func TestAuthService_CompleteEmailChangeFlow(t *testing.T) {
 	// Setup
-	mockUserRepo := new(MockUserRepository)
-	mockSessionRepo := new(MockSessionRepository)
-	mockJWTUtil := new(MockJWTUtil)
-	mockVerificationTokenRepo := new(MockVerificationTokenRepository)
-	mockEmailPublisher := new(MockEmailPublisher)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockSessionRepo := new(mocks.MockSessionRepository)
+	mockJWTUtil := new(mocks.MockJWTUtil)
+	mockVerificationTokenRepo := new(mocks.MockVerificationTokenRepository)
+	mockEmailPublisher := new(mocks.MockEmailPublisher)
 	service := service.NewAuthService(mockUserRepo, mockSessionRepo, mockJWTUtil, mockVerificationTokenRepo, mockEmailPublisher, nil, nil)
 
 	ctx := context.Background()
