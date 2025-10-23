@@ -2,6 +2,30 @@
 
 User Service adalah microservice untuk manajemen autentikasi dan user menggunakan Clean Architecture pattern dengan Go.
 
+## ✅ Implemented Features
+
+- **User Registration**: Pendaftaran user baru dengan email verification
+- **User Authentication**: Login dengan JWT token
+- **User Authorization**: Role-based access control (RBAC)
+- **Profile Management**:
+  - Get user profile data
+  - Update user profile data (name, email, phone, address, location, photo)
+  - Upload profile image
+- **Role Management**:
+  - Get all roles with optional search (Super Admin only)
+  - Get role by ID with associated users (Super Admin only)
+  - Create new roles with validation (Super Admin only)
+  - Role-based permissions with Super Admin access control
+- **Customer Management**:
+  - Get all customers with search & pagination (Super Admin only)
+  - Get customer by ID (Super Admin only)
+  - Create new customers with validation (Super Admin only)
+  - Update customer data (Super Admin only)
+  - Delete customers (soft delete, Super Admin only)
+- **Email Verification**: Verifikasi email untuk aktivasi akun
+- **Password Reset**: Forgot password dengan email reset link
+- **Session Management**: Manajemen session dengan Redis
+
 ## 🚀 Quick Start
 
 ### 1. Setup Environment
@@ -530,6 +554,251 @@ Content-Type: multipart/form-data
 ```json
 {
   "message": "Incorrect password"
+}
+```
+
+### Customer Management (Super Admin Only)
+
+#### Get All Customers
+
+**Endpoint:** `GET /api/v1/admin/customers`
+
+**Headers:**
+```
+Authorization: Bearer <super_admin_jwt_token>
+Content-Type: application/json
+```
+
+**Query Parameters:**
+- `search` (optional): Search by name or email (case-insensitive)
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 10, max: 100)
+- `orderBy` (optional): Sort order (default: created_at DESC)
+
+**Success Response (200):**
+```json
+{
+  "message": "Customers retrieved successfully",
+  "data": [
+    {
+      "id": 1,
+      "name": "John Customer",
+      "photo": "https://example.com/photo.jpg",
+      "email": "john@example.com",
+      "phone": "+628987654321",
+      "address": "Jakarta"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "total_count": 4,
+    "per_page": 10,
+    "total_page": 1
+  }
+}
+```
+
+**Error Responses:**
+
+**401 Unauthorized - Missing Token:**
+```json
+{
+  "message": "Authorization header required",
+  "data": null
+}
+```
+
+**403 Forbidden - Insufficient Role:**
+```json
+{
+  "message": "Access denied",
+  "data": null
+}
+```
+
+**500 Internal Server Error:**
+```json
+{
+  "message": "Failed to retrieve customers",
+  "data": null
+}
+```
+
+#### Get Customer by ID
+
+**Endpoint:** `GET /api/v1/admin/customers/:id`
+
+**Headers:**
+```
+Authorization: Bearer <super_admin_jwt_token>
+Content-Type: application/json
+```
+
+**Success Response (200):**
+```json
+{
+  "message": "Customer retrieved successfully",
+  "data": {
+    "id": 1,
+    "name": "John Customer",
+    "email": "john@example.com",
+    "phone": "+628987654321",
+    "photo": "https://example.com/photo.jpg",
+    "address": "Jakarta",
+    "lat": -6.2088,
+    "lng": 106.8456,
+    "is_verified": true
+  }
+}
+```
+
+**Error Responses:**
+
+**400 Bad Request - Invalid ID:**
+```json
+{
+  "message": "Invalid customer ID format",
+  "data": null
+}
+```
+
+**404 Not Found - Customer Not Found:**
+```json
+{
+  "message": "Customer not found",
+  "data": null
+}
+```
+
+#### Create Customer
+
+**Endpoint:** `POST /api/v1/admin/customers`
+
+**Headers:**
+```
+Authorization: Bearer <super_admin_jwt_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "name": "New Customer",
+  "email": "new@example.com",
+  "password": "password123",
+  "phone": "+628123456789",
+  "address": "Jakarta",
+  "lat": -6.2088,
+  "lng": 106.8456
+}
+```
+
+**Success Response (201):**
+```json
+{
+  "message": "Customer created successfully",
+  "data": {
+    "id": 5,
+    "name": "New Customer",
+    "email": "new@example.com",
+    "phone": "+628123456789",
+    "address": "Jakarta"
+  }
+}
+```
+
+**Error Responses:**
+
+**409 Conflict - Email Already Exists:**
+```json
+{
+  "message": "Email already exists",
+  "data": null
+}
+```
+
+**422 Unprocessable Entity - Validation Failed:**
+```json
+{
+  "message": "Validation failed",
+  "data": null
+}
+```
+
+#### Update Customer
+
+**Endpoint:** `PUT /api/v1/admin/customers/:id`
+
+**Headers:**
+```
+Authorization: Bearer <super_admin_jwt_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "name": "Updated Customer",
+  "email": "updated@example.com",
+  "phone": "+628987654321",
+  "address": "Jakarta Updated",
+  "lat": -6.2000,
+  "lng": 106.8167,
+  "photo": "https://example.com/new-photo.jpg"
+}
+```
+
+**Success Response (200):**
+```json
+{
+  "message": "Customer updated successfully",
+  "data": null
+}
+```
+
+**Error Responses:**
+
+**404 Not Found - Customer Not Found:**
+```json
+{
+  "message": "Customer not found",
+  "data": null
+}
+```
+
+**409 Conflict - Email Already Exists:**
+```json
+{
+  "message": "Email already exists",
+  "data": null
+}
+```
+
+#### Delete Customer
+
+**Endpoint:** `DELETE /api/v1/admin/customers/:id`
+
+**Headers:**
+```
+Authorization: Bearer <super_admin_jwt_token>
+Content-Type: application/json
+```
+
+**Success Response (200):**
+```json
+{
+  "message": "Customer deleted successfully",
+  "data": null
+}
+```
+
+**Error Responses:**
+
+**404 Not Found - Customer Not Found:**
+```json
+{
+  "message": "Customer not found",
+  "data": null
 }
 ```
 

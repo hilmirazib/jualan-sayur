@@ -79,6 +79,32 @@ func (m *MockUserRepository) UpdateUserProfile(ctx context.Context, userID int64
 	return args.Error(0)
 }
 
+func (m *MockUserRepository) GetCustomers(ctx context.Context, search string, page, limit int, orderBy string) ([]entity.UserEntity, int64, error) {
+	args := m.Called(ctx, search, page, limit, orderBy)
+	if args.Get(0) == nil {
+		return nil, 0, args.Error(2)
+	}
+	return args.Get(0).([]entity.UserEntity), args.Get(1).(int64), args.Error(2)
+}
+
+func (m *MockUserRepository) CreateCustomer(ctx context.Context, customer *entity.UserEntity) (*entity.UserEntity, error) {
+	args := m.Called(ctx, customer)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.UserEntity), args.Error(1)
+}
+
+func (m *MockUserRepository) UpdateCustomer(ctx context.Context, customerID int64, customer *entity.UserEntity) error {
+	args := m.Called(ctx, customerID, customer)
+	return args.Error(0)
+}
+
+func (m *MockUserRepository) DeleteCustomer(ctx context.Context, customerID int64) error {
+	args := m.Called(ctx, customerID)
+	return args.Error(0)
+}
+
 // MockSessionRepository mocks the session repository
 type MockSessionRepository struct {
 	mock.Mock
@@ -291,5 +317,93 @@ func (m *MockRoleService) UpdateRole(ctx context.Context, id int64, name string)
 
 func (m *MockRoleService) DeleteRole(ctx context.Context, id int64) error {
 	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+// MockUserService mocks the user service
+type MockUserService struct {
+	mock.Mock
+}
+
+func (m *MockUserService) GetUserByEmail(ctx context.Context, email string) (*entity.UserEntity, error) {
+	args := m.Called(ctx, email)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.UserEntity), args.Error(1)
+}
+
+func (m *MockUserService) CreateUser(ctx context.Context, user *entity.UserEntity) (*entity.UserEntity, error) {
+	args := m.Called(ctx, user)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.UserEntity), args.Error(1)
+}
+
+func (m *MockUserService) UpdateUserVerificationStatus(ctx context.Context, userID int64, isVerified bool) error {
+	args := m.Called(ctx, userID, isVerified)
+	return args.Error(0)
+}
+
+func (m *MockUserService) GetUserByEmailIncludingUnverified(ctx context.Context, email string) (*entity.UserEntity, error) {
+	args := m.Called(ctx, email)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.UserEntity), args.Error(1)
+}
+
+func (m *MockUserService) UpdateUserPassword(ctx context.Context, userID int64, hashedPassword string) error {
+	args := m.Called(ctx, userID, hashedPassword)
+	return args.Error(0)
+}
+
+func (m *MockUserService) GetUserByID(ctx context.Context, userID int64) (*entity.UserEntity, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.UserEntity), args.Error(1)
+}
+
+func (m *MockUserService) UpdateUserPhoto(ctx context.Context, userID int64, photoURL string) error {
+	args := m.Called(ctx, userID, photoURL)
+	return args.Error(0)
+}
+
+func (m *MockUserService) UpdateUserEmail(ctx context.Context, userID int64, email string) error {
+	args := m.Called(ctx, userID, email)
+	return args.Error(0)
+}
+
+func (m *MockUserService) UpdateUserProfile(ctx context.Context, userID int64, name, email, phone, address string, lat, lng float64, photo string) error {
+	args := m.Called(ctx, userID, name, email, phone, address, lat, lng, photo)
+	return args.Error(0)
+}
+
+func (m *MockUserService) GetCustomers(ctx context.Context, search string, page, limit int, orderBy string) ([]entity.UserEntity, *entity.PaginationEntity, error) {
+	args := m.Called(ctx, search, page, limit, orderBy)
+	if args.Get(0) == nil {
+		return nil, nil, args.Error(2)
+	}
+	return args.Get(0).([]entity.UserEntity), args.Get(1).(*entity.PaginationEntity), args.Error(2)
+}
+
+func (m *MockUserService) CreateCustomer(ctx context.Context, name, email, password, phone, address string, lat, lng float64) (*entity.UserEntity, error) {
+	args := m.Called(ctx, name, email, password, phone, address, lat, lng)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.UserEntity), args.Error(1)
+}
+
+func (m *MockUserService) UpdateCustomer(ctx context.Context, customerID int64, name, email, phone, address string, lat, lng float64, photo string) error {
+	args := m.Called(ctx, customerID, name, email, phone, address, lat, lng, photo)
+	return args.Error(0)
+}
+
+func (m *MockUserService) DeleteCustomer(ctx context.Context, customerID int64) error {
+	args := m.Called(ctx, customerID)
 	return args.Error(0)
 }

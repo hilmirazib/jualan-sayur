@@ -106,6 +106,7 @@ func RunServer() {
 	// Initialize handlers
 	userHandler := handler.NewUserHandler(app.UserService)
 	roleHandler := handler.NewRoleHandler(app.RoleService)
+	customerHandler := handler.NewCustomerHandler(app.UserService)
 
 	public := e.Group("/api/v1")
 	public.POST("/auth/signin", userHandler.SignIn)
@@ -126,6 +127,7 @@ func RunServer() {
 	admin.PUT("/roles/:id", roleHandler.UpdateRole, middleware.SuperAdminMiddleware())
 	admin.DELETE("/roles/:id", roleHandler.DeleteRole, middleware.SuperAdminMiddleware())
 	admin.GET("/roles/:id", roleHandler.GetRoleByID, middleware.SuperAdminMiddleware())
+	admin.GET("/customers", customerHandler.GetCustomers, middleware.SuperAdminMiddleware())
 
 	// Root endpoint - redirect to health
 	e.GET("/", func(c echo.Context) error {

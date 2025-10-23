@@ -295,6 +295,70 @@ func (u *UserRepository) formatLatLng(lat, lng float64) (string, string) {
 	return strconv.FormatFloat(lat, 'f', -1, 64), strconv.FormatFloat(lng, 'f', -1, 64)
 }
 
+func (u *UserRepository) GetCustomers(ctx context.Context, search string, page, limit int, orderBy string) ([]entity.UserEntity, int64, error) {
+	var users []model.User
+	var totalCount int64
+
+	query := u.db.WithContext(ctx).Joins("JOIN user_role ur ON users.id = ur.user_id").
+		Joins("JOIN roles r ON ur.role_id = r.id").
+		Where("r.name = ? AND users.is_verified = ?", "Customer", true).
+		Where("users.deleted_at IS NULL")
+
+	// Apply search filter
+	if search != "" {
+		query = query.Where("users.name ILIKE ? OR users.email ILIKE ?", "%"+search+"%", "%"+search+"%")
+	}
+
+	// Get total count for pagination
+	if err := query.Model(&model.User{}).Count(&totalCount).Error; err != nil {
+		log.Error().Err(err).Str("search", search).Msg("[UserRepository-GetCustomers] Failed to count customers")
+		return nil, 0, err
+	}
+
+	// Apply ordering
+	if orderBy != "" {
+		query = query.Order(orderBy)
+	} else {
+		query = query.Order("users.created_at DESC")
+	}
+
+	// Apply pagination
+	offset := (page - 1) * limit
+	query = query.Offset(offset).Limit(limit)
+
+	// Execute query with preloading roles
+	if err := query.Preload("Roles").Find(&users).Error; err != nil {
+		log.Error().Err(err).Str("search", search).Int("page", page).Int("limit", limit).Msg("[UserRepository-GetCustomers] Failed to get customers")
+		return nil, 0, err
+	}
+
+	var customerEntities []entity.UserEntity
+	for _, user := range users {
+		// Parse lat/lng
+		lat, lng, err := u.parseLatLng(user.Lat, user.Lng)
+		if err != nil {
+			log.Warn().Err(err).Str("lat", user.Lat).Str("lng", user.Lng).Int64("user_id", user.ID).Msg("[UserRepository-GetCustomers] Failed to parse lat/lng, using default values")
+			lat, lng = 0.0, 0.0
+		}
+
+		customerEntities = append(customerEntities, entity.UserEntity{
+			ID:         user.ID,
+			Name:       user.Name,
+			Email:      user.Email,
+			Photo:      user.Photo,
+			Phone:      user.Phone,
+			RoleName:   "Customer", // Since we filtered by role
+			Address:    user.Address,
+			Lat:        lat,
+			Lng:        lng,
+			IsVerified: user.IsVerified,
+		})
+	}
+
+	log.Info().Int("count", len(customerEntities)).Int64("total_count", totalCount).Str("search", search).Int("page", page).Int("limit", limit).Msg("[UserRepository-GetCustomers] Customers retrieved successfully")
+	return customerEntities, totalCount, nil
+}
+
 func NewUserRepository(db *gorm.DB) port.UserRepositoryInterface {
 	return &UserRepository{db: db}
 }

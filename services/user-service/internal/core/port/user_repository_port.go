@@ -16,4 +16,5 @@ type UserRepositoryInterface interface {
 	UpdateUserPhoto(ctx context.Context, userID int64, photoURL string) error
 	UpdateUserEmail(ctx context.Context, userID int64, email string) error
 	UpdateUserProfile(ctx context.Context, userID int64, name, email, phone, address string, lat, lng float64, photo string) error
+	GetCustomers(ctx context.Context, search string, page, limit int, orderBy string) ([]entity.UserEntity, int64, error)
 }

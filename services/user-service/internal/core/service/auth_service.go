@@ -28,6 +28,7 @@ type AuthServiceInterface interface {
 	GetProfile(ctx context.Context, userID int64) (*entity.UserEntity, error)
 	UploadProfileImage(ctx context.Context, userID int64, file io.Reader, contentType, filename string) (string, error)
 	UpdateProfile(ctx context.Context, userID int64, name, email, phone, address string, lat, lng float64, photo string) error
+	GetCustomers(ctx context.Context, search string, page, limit int, orderBy string) ([]entity.UserEntity, *entity.PaginationEntity, error)
 }
 
 type AuthService struct {
@@ -559,6 +560,36 @@ func (s *AuthService) UpdateProfile(ctx context.Context, userID int64, name, ema
 	}
 
 	return nil
+}
+
+func (s *AuthService) GetCustomers(ctx context.Context, search string, page, limit int, orderBy string) ([]entity.UserEntity, *entity.PaginationEntity, error) {
+	// Validate pagination parameters
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 10 // Default limit
+	}
+
+	// Get customers from repository
+	customers, totalCount, err := s.userRepo.GetCustomers(ctx, search, page, limit, orderBy)
+	if err != nil {
+		log.Error().Err(err).Str("search", search).Int("page", page).Int("limit", limit).Msg("[AuthService-GetCustomers] Failed to get customers")
+		return nil, nil, errors.New("failed to retrieve customers")
+	}
+
+	// Calculate pagination info
+	totalPages := int((totalCount + int64(limit) - 1) / int64(limit)) // Ceiling division
+
+	pagination := &entity.PaginationEntity{
+		Page:       page,
+		TotalCount: totalCount,
+		PerPage:    limit,
+		TotalPage:  totalPages,
+	}
+
+	log.Info().Int("count", len(customers)).Int64("total_count", totalCount).Str("search", search).Int("page", page).Int("limit", limit).Msg("[AuthService-GetCustomers] Customers retrieved successfully")
+	return customers, pagination, nil
 }
 
 func (s *AuthService) generateVerificationToken() (string, error) {
