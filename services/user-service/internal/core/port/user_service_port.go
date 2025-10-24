@@ -18,4 +18,5 @@ type UserServiceInterface interface {
 	UploadProfileImage(ctx context.Context, userID int64, file io.Reader, contentType, filename string) (string, error)
 	UpdateProfile(ctx context.Context, userID int64, name, email, phone, address string, lat, lng float64, photo string) error
 	GetCustomers(ctx context.Context, search string, page, limit int, orderBy string) ([]entity.UserEntity, *entity.PaginationEntity, error)
+	GetCustomerByID(ctx context.Context, customerID int64) (*entity.UserEntity, error)
 }

@@ -647,7 +647,7 @@ Content-Type: application/json
     "address": "Jakarta",
     "lat": -6.2088,
     "lng": 106.8456,
-    "is_verified": true
+    "role_id": 2
   }
 }
 ```
@@ -662,10 +662,34 @@ Content-Type: application/json
 }
 ```
 
+**401 Unauthorized - Missing Token:**
+```json
+{
+  "message": "Authorization header required",
+  "data": null
+}
+```
+
+**403 Forbidden - Insufficient Role:**
+```json
+{
+  "message": "Access denied",
+  "data": null
+}
+```
+
 **404 Not Found - Customer Not Found:**
 ```json
 {
   "message": "Customer not found",
+  "data": null
+}
+```
+
+**500 Internal Server Error:**
+```json
+{
+  "message": "Failed to retrieve customer",
   "data": null
 }
 ```

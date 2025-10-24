@@ -87,6 +87,14 @@ func (m *MockUserRepository) GetCustomers(ctx context.Context, search string, pa
 	return args.Get(0).([]entity.UserEntity), args.Get(1).(int64), args.Error(2)
 }
 
+func (m *MockUserRepository) GetCustomerByID(ctx context.Context, customerID int64) (*entity.UserEntity, error) {
+	args := m.Called(ctx, customerID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.UserEntity), args.Error(1)
+}
+
 func (m *MockUserRepository) CreateCustomer(ctx context.Context, customer *entity.UserEntity) (*entity.UserEntity, error) {
 	args := m.Called(ctx, customer)
 	if args.Get(0) == nil {

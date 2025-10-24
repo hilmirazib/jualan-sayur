@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"gorm.io/gorm"
 )
 
 func TestAuthService_GetCustomers_Success(t *testing.T) {
@@ -165,5 +166,73 @@ func TestAuthService_GetCustomers_EmptyResult(t *testing.T) {
 	assert.Equal(t, expectedTotalCount, pagination.TotalCount)
 	assert.Equal(t, 10, pagination.PerPage)
 	assert.Equal(t, 0, pagination.TotalPage)
+	mockUserRepo.AssertExpectations(t)
+}
+
+func TestAuthService_GetCustomerByID_Success(t *testing.T) {
+	// Setup
+	mockUserRepo := &mocks.MockUserRepository{}
+	expectedCustomer := &entity.UserEntity{
+		ID:       1,
+		Name:     "John Customer",
+		Email:    "john@example.com",
+		Phone:    "+628987654321",
+		Photo:    "https://example.com/photo.jpg",
+		Address:  "Jakarta",
+		Lat:      -6.2088,
+		Lng:      106.8456,
+		RoleName: "Customer",
+		RoleID:   2,
+		IsVerified: true,
+	}
+	customerID := int64(1)
+
+	mockUserRepo.On("GetCustomerByID", mock.Anything, customerID).Return(expectedCustomer, nil)
+
+	// Test service
+	authService := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
+	customer, err := authService.GetCustomerByID(context.Background(), customerID)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, expectedCustomer, customer)
+	mockUserRepo.AssertExpectations(t)
+}
+
+func TestAuthService_GetCustomerByID_NotFound(t *testing.T) {
+	// Setup
+	mockUserRepo := &mocks.MockUserRepository{}
+	customerID := int64(999)
+	expectedError := errors.New("customer not found")
+
+	mockUserRepo.On("GetCustomerByID", mock.Anything, customerID).Return(nil, gorm.ErrRecordNotFound)
+
+	// Test service
+	authService := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
+	customer, err := authService.GetCustomerByID(context.Background(), customerID)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, customer)
+	assert.Equal(t, expectedError.Error(), err.Error())
+	mockUserRepo.AssertExpectations(t)
+}
+
+func TestAuthService_GetCustomerByID_RepositoryError(t *testing.T) {
+	// Setup
+	mockUserRepo := &mocks.MockUserRepository{}
+	customerID := int64(1)
+	expectedError := errors.New("database connection failed")
+
+	mockUserRepo.On("GetCustomerByID", mock.Anything, customerID).Return(nil, expectedError)
+
+	// Test service
+	authService := service.NewAuthService(mockUserRepo, nil, nil, nil, nil, nil, nil)
+	customer, err := authService.GetCustomerByID(context.Background(), customerID)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, customer)
+	assert.Equal(t, expectedError, err)
 	mockUserRepo.AssertExpectations(t)
 }

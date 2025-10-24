@@ -359,6 +359,54 @@ func (u *UserRepository) GetCustomers(ctx context.Context, search string, page, 
 	return customerEntities, totalCount, nil
 }
 
+func (u *UserRepository) GetCustomerByID(ctx context.Context, customerID int64) (*entity.UserEntity, error) {
+	modelUser := model.User{}
+	if err := u.db.WithContext(ctx).Where("id = ? AND is_verified = ?", customerID, true).Preload("Roles").First(&modelUser).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			log.Info().Int64("customer_id", customerID).Msg("[UserRepository-GetCustomerByID] Customer not found")
+			return nil, gorm.ErrRecordNotFound
+		}
+		log.Error().Err(err).Int64("customer_id", customerID).Msg("[UserRepository-GetCustomerByID] Failed to get customer by ID")
+		return nil, err
+	}
+
+	// Verify user has Customer role
+	var roleName string
+	var roleID int64
+	if len(modelUser.Roles) > 0 {
+		roleName = modelUser.Roles[0].Name
+		roleID = modelUser.Roles[0].ID
+		if roleName != "Customer" {
+			log.Warn().Int64("customer_id", customerID).Str("role_name", roleName).Msg("[UserRepository-GetCustomerByID] User is not a customer")
+			return nil, gorm.ErrRecordNotFound
+		}
+	} else {
+		log.Warn().Int64("customer_id", customerID).Msg("[UserRepository-GetCustomerByID] User has no role assigned")
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	lat, lng, err := u.parseLatLng(modelUser.Lat, modelUser.Lng)
+	if err != nil {
+		log.Warn().Err(err).Str("lat", modelUser.Lat).Str("lng", modelUser.Lng).Int64("customer_id", customerID).Msg("[UserRepository-GetCustomerByID] Failed to parse lat/lng, using default values")
+		lat, lng = 0.0, 0.0
+	}
+
+	return &entity.UserEntity{
+		ID:         modelUser.ID,
+		Name:       modelUser.Name,
+		Email:      modelUser.Email,
+		Password:   modelUser.Password,
+		RoleName:   roleName,
+		RoleID:     roleID,
+		Address:    modelUser.Address,
+		Lat:        lat,
+		Lng:        lng,
+		Phone:      modelUser.Phone,
+		Photo:      modelUser.Photo,
+		IsVerified: modelUser.IsVerified,
+	}, nil
+}
+
 func NewUserRepository(db *gorm.DB) port.UserRepositoryInterface {
 	return &UserRepository{db: db}
 }

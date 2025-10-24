@@ -29,6 +29,7 @@ type AuthServiceInterface interface {
 	UploadProfileImage(ctx context.Context, userID int64, file io.Reader, contentType, filename string) (string, error)
 	UpdateProfile(ctx context.Context, userID int64, name, email, phone, address string, lat, lng float64, photo string) error
 	GetCustomers(ctx context.Context, search string, page, limit int, orderBy string) ([]entity.UserEntity, *entity.PaginationEntity, error)
+	GetCustomerByID(ctx context.Context, customerID int64) (*entity.UserEntity, error)
 }
 
 type AuthService struct {
@@ -590,6 +591,20 @@ func (s *AuthService) GetCustomers(ctx context.Context, search string, page, lim
 
 	log.Info().Int("count", len(customers)).Int64("total_count", totalCount).Str("search", search).Int("page", page).Int("limit", limit).Msg("[AuthService-GetCustomers] Customers retrieved successfully")
 	return customers, pagination, nil
+}
+
+func (s *AuthService) GetCustomerByID(ctx context.Context, customerID int64) (*entity.UserEntity, error) {
+	customer, err := s.userRepo.GetCustomerByID(ctx, customerID)
+	if err != nil {
+		log.Error().Err(err).Int64("customer_id", customerID).Msg("[AuthService-GetCustomerByID] Failed to get customer")
+		if err.Error() == "record not found" {
+			return nil, errors.New("customer not found")
+		}
+		return nil, err
+	}
+
+	log.Info().Int64("customer_id", customerID).Msg("[AuthService-GetCustomerByID] Customer retrieved successfully")
+	return customer, nil
 }
 
 func (s *AuthService) generateVerificationToken() (string, error) {

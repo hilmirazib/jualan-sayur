@@ -128,6 +128,7 @@ func RunServer() {
 	admin.DELETE("/roles/:id", roleHandler.DeleteRole, middleware.SuperAdminMiddleware())
 	admin.GET("/roles/:id", roleHandler.GetRoleByID, middleware.SuperAdminMiddleware())
 	admin.GET("/customers", customerHandler.GetCustomers, middleware.SuperAdminMiddleware())
+	admin.GET("/customers/:id", customerHandler.GetCustomerByID, middleware.SuperAdminMiddleware())
 
 	// Root endpoint - redirect to health
 	e.GET("/", func(c echo.Context) error {

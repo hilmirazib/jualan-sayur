@@ -6,6 +6,7 @@ type UserEntity struct {
 	Email      string
 	Password   string
 	RoleName   string
+	RoleID     int64
 	Address    string
 	Lat        float64
 	Lng        float64
